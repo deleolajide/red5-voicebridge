@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<privateHost>192.168.1.70</privateHost>
+	<publicHost>192.168.1.70</publicHost>	
+	<conferences>
+		<conference id='2222' pin='2222' />
+		<conference id='1111' pin='1111' />		
+	</conferences>
+	
+</config>
