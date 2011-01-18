@@ -33,6 +33,7 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 
     protected static Logger log = Red5LoggerFactory.getLogger( Application.class, "voicebridge" );
 	private String version = "0.0.0.1";
+	private Config config = Config.getInstance();
 
     @Override
     public boolean appStart( IScope scope ) {
@@ -40,15 +41,13 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
         loginfo( "Red5VoiceBridge starting in scope " + scope.getName() + " " + System.getProperty( "user.dir" ) );
         loginfo(String.format("Red5VoiceBridge version %s", version));
 
-		Config.getInstance();
-
 		String appPath = System.getProperty("user.dir");
 		String logDir = appPath + File.separator + "log" + File.separator;
 
 		Properties properties = new Properties();
 
 		System.setProperty("com.sun.voip.server.LOGLEVEL", "99");
-		System.setProperty("com.sun.voip.server.SIPProxy", "192.168.1.90");
+		System.setProperty("com.sun.voip.server.SIPProxy", "");
 		System.setProperty("user.name", "1002");
 		//System.setProperty("com.sun.voip.server.VoIPGateways", "192.168.1.90;sip:1002@192.168.1.70");
 		properties.setProperty("javax.sip.STACK_NAME", "JAIN SIP 1.1");
@@ -57,11 +56,11 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 		properties.setProperty("gov.nist.javax.sip.SERVER_LOG", logDir + "sip_server.log");
 		properties.setProperty("gov.nist.javax.sip.DEBUG_LOG", logDir + "sip_debug.log");
 
-		Bridge.setPublicHost("192.168.1.70");
-		Bridge.setPrivateHost("192.168.1.70");
-		Bridge.setBridgeLocation("BTC");
+		Bridge.setPublicHost(config.getPublicHost());
+		Bridge.setPrivateHost(config.getPrivateHost());
+		Bridge.setBridgeLocation("LCL");
 
-		new SipServer("192.168.1.70", properties);
+		new SipServer(config.getPrivateHost(), properties);
 
         return true;
     }
