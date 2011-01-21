@@ -137,7 +137,6 @@ public class IncomingConferenceHandler extends Thread
 	    playTreatmentToCall(ENTER_MEETING_CODE);
 
 	    state = WAITING_FOR_MEETING_CODE;
-
 	    start();
 	    return;
 	}
@@ -235,6 +234,7 @@ public class IncomingConferenceHandler extends Thread
 			try {
 				incomingCallHandler.transferCall(meetingCode);
 				state = IN_MEETING;
+
 			} catch (IOException e) {
 				System.err.println("Exception joining meeting! " + meetingCode + " " + e.getMessage());
 

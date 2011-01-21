@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -40,7 +40,7 @@ public class TwoPartyCallHandler extends Thread {
      * start a two party call
      */
     public void run() {
-	OutgoingCallHandler callHandler1 = 
+	OutgoingCallHandler callHandler1 =
 	    new OutgoingCallHandler(callEventListener, cp);
 
 	synchronized(this) {
@@ -55,7 +55,7 @@ public class TwoPartyCallHandler extends Thread {
 	}
 
 	CallParticipant cp2 = new CallParticipant();
-			
+
 	cp2.setCallAnswerTimeout(cp.getCallAnswerTimeout());
 	cp2.setCallAnsweredTreatment(cp.getSecondPartyTreatment());
 	cp2.setCallEndTreatment(cp.getSecondPartyCallEndTreatment());
@@ -76,8 +76,8 @@ public class TwoPartyCallHandler extends Thread {
 
 	cp2.setPhoneNumber(cp.getSecondPartyNumber());
 	cp2.setVoiceDetection(cp.getSecondPartyVoiceDetection());
-			
-	OutgoingCallHandler callHandler2 = 
+
+	OutgoingCallHandler callHandler2 =
 	    new OutgoingCallHandler(callEventListener, cp2);
 
 	synchronized(this) {

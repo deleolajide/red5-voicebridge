@@ -280,11 +280,11 @@ public abstract class CallHandler extends Thread {
 	    callEvent.setCallState(new CallState(CallState.UNINITIALIZED));
 	}
 
-        synchronized (callEventListeners) {
-            for (int i = 0; i < callEventListeners.size(); i++) {
-                CallEventListener listener = (CallEventListener)
-                    callEventListeners.elementAt(i);
-
+        synchronized (callEventListeners)
+        {
+            for (int i = 0; i < callEventListeners.size(); i++)
+            {
+                CallEventListener listener = (CallEventListener) callEventListeners.elementAt(i);
                 listener.callEventNotification(callEvent);
             }
         }

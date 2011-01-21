@@ -79,7 +79,7 @@ public class CallParticipant {
     private boolean speexEncode			   = false;
     private String  whisperGroupId		   = null;
     private String  voipGateway			   = null;
-    private boolean voiceDetection       	   = false;
+    private boolean voiceDetection       	   = true;
     private boolean voiceDetectionWhileMuted       = false;
     private boolean handleSessionProgress	   = false;
     private String remoteMediaInfo		   = null;

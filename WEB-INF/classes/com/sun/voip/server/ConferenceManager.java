@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -50,7 +50,7 @@ import java.util.ArrayList;
  * Members can join and leave the conference.
  */
 public class ConferenceManager {
-    private static ArrayList conferenceList = new ArrayList();  
+    private static ArrayList conferenceList = new ArrayList();
 
     private String             conferenceId;	      // conference identifier
 
@@ -59,7 +59,7 @@ public class ConferenceManager {
     private ArrayList 	       memberList;	      // for iterating members
 
     private boolean	       isFirstMember = true;
-  
+
     /*
      * If useSingleSender is true, a single
      * conferenceSender will be used for all conferences.
@@ -74,7 +74,7 @@ public class ConferenceManager {
     private WGManager	       wgManager;	      // whisper group manager
     private ConferenceReceiver conferenceReceiver;    // receiver thread
 
-    private boolean	       permanent = false;     
+    private boolean	       permanent = false;
 
     private static int	       totalMembers = 0;
 
@@ -101,7 +101,7 @@ public class ConferenceManager {
 
     /**
      * Constructor
-     * 
+     *
      * Create a new conference
      * @param conferenceId String identifying the conference
      */
@@ -115,8 +115,8 @@ public class ConferenceManager {
 	try {
 	    setMediaInfo(mediaPreference);
 	} catch (ParseException e) {
-	    Logger.println(conferenceId 
-		+ ":  Can't set meeting media setting to " 
+	    Logger.println(conferenceId
+		+ ":  Can't set meeting media setting to "
 		+ mediaPreference + ": " + e.getMessage());
 	}
 
@@ -133,12 +133,12 @@ public class ConferenceManager {
 
 	if (loneReceiverPort != 0) {
 	    if (loneConferenceReceiver == null) {
-		loneConferenceReceiver = 
-	    	    new ConferenceReceiver("Singleton", loneReceiverPort);  // start receiver 
+		loneConferenceReceiver =
+	    	    new ConferenceReceiver("Singleton", loneReceiverPort);  // start receiver
 	    }
 	    conferenceReceiver = loneConferenceReceiver;
 	} else {
-	    conferenceReceiver = new ConferenceReceiver(conferenceId, 0);  // start receiver 
+	    conferenceReceiver = new ConferenceReceiver(conferenceId, 0);  // start receiver
 	}
     }
 
@@ -146,7 +146,7 @@ public class ConferenceManager {
 	/*
 	 * Conference id may be qualified by the media parameters.
 	 * The syntax is <conferenceId>:<PCM[U]|SPEEX/<sampleRate>/<channels>
-	 */ 
+	 */
 	mediaInfo = parseMediaPreference(mediaPreference);
 	mediaPreference = null;
 
@@ -161,7 +161,7 @@ public class ConferenceManager {
 	}
     }
 
-    private MediaInfo parseMediaPreference(String mediaPreference) 
+    private MediaInfo parseMediaPreference(String mediaPreference)
 	    throws ParseException {
 
 	if (mediaPreference == null) {
@@ -171,7 +171,7 @@ public class ConferenceManager {
 
 	    return SdpManager.findMediaInfo(RtpPacket.PCMU_ENCODING, 8000, 1);
 	}
-	    
+
 	int ix;
 
 	int encoding = RtpPacket.PCMU_ENCODING;
@@ -188,10 +188,12 @@ public class ConferenceManager {
 	    } else if (mediaPreference.indexOf("SPEEX/") == 0) {
 		encoding = RtpPacket.SPEEX_ENCODING;
 		mediaPreference = mediaPreference.substring(6);
+	    } else if (mediaPreference.indexOf("PCM") == 0) {
+			// do nothing
 	    } else {
 		Logger.println("Invalid media specification " + mediaPreference);
 	    }
-	
+
 	    if ((ix = mediaPreference.indexOf("/")) < 0) {
 		Logger.println("Invalid media specification " + mediaPreference);
 	    } else {
@@ -204,16 +206,16 @@ public class ConferenceManager {
 	    Logger.println("Invalid media specification " + mediaPreference);
 	}
 
-	if (sampleRate == 8000 && channels == 1 && 
+	if (sampleRate == 8000 && channels == 1 &&
 	        encoding == RtpPacket.PCM_ENCODING) {
 
 	    encoding = RtpPacket.PCMU_ENCODING;
 	}
 
-	MediaInfo mediaInfo = 
+	MediaInfo mediaInfo =
 	    SdpManager.findMediaInfo(encoding, sampleRate, channels);
 
-	Logger.println("conference " + conferenceId 
+	Logger.println("conference " + conferenceId
 	    + " using media settings " + mediaInfo);
 
 	conferenceStartTime = System.currentTimeMillis();
@@ -229,14 +231,14 @@ public class ConferenceManager {
 	return wgManager;
     }
 
-    public static WhisperGroup createWhisperGroup(String conferenceId, 
+    public static WhisperGroup createWhisperGroup(String conferenceId,
 	    String whisperGroupId, double attenuation) throws ParseException {
 
 	synchronized (conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
-	    return conferenceManager.createWhisperGroup(whisperGroupId, 
+	    return conferenceManager.createWhisperGroup(whisperGroupId,
 		attenuation);
 	}
     }
@@ -249,7 +251,7 @@ public class ConferenceManager {
 	}
     }
 
-    public static void destroyWhisperGroup(String conferenceId, 
+    public static void destroyWhisperGroup(String conferenceId,
 	    String whisperGroupId) throws ParseException {
 
         synchronized (conferenceList) {
@@ -260,7 +262,7 @@ public class ConferenceManager {
         }
     }
 
-    public void destroyWhisperGroup(String whisperGroupId) 
+    public void destroyWhisperGroup(String whisperGroupId)
 	    throws ParseException {
 
 	synchronized (conferenceList) {
@@ -275,10 +277,10 @@ public class ConferenceManager {
 
 	synchronized (conferenceList) {
             for (int i = 0; i < conferenceList.size(); i++) {
-	        ConferenceManager conferenceManager = (ConferenceManager) 
+	        ConferenceManager conferenceManager = (ConferenceManager)
 	            conferenceList.get(i);
 
-	        s += "Whisper groups for conference " 
+	        s += "Whisper groups for conference "
 		    + conferenceManager.getId() + "\n";
 
 	        s += conferenceManager.getWGManager().getAbbreviatedWhisperGroupInfo(true);
@@ -294,10 +296,10 @@ public class ConferenceManager {
 
 	synchronized (conferenceList) {
             for (int i = 0; i < conferenceList.size(); i++) {
-	        ConferenceManager conferenceManager = (ConferenceManager) 
+	        ConferenceManager conferenceManager = (ConferenceManager)
 	            conferenceList.get(i);
 
-	        s += "Whisper groups for conference " 
+	        s += "Whisper groups for conference "
 		    + conferenceManager.getId() + "\n";
 	        s += conferenceManager.getWGManager().getWhisperGroupInfo();
 	        s += "\n";
@@ -307,11 +309,11 @@ public class ConferenceManager {
 	return s;
     }
 
-    public static void setTransientWhisperGroup(String conferenceId, 
+    public static void setTransientWhisperGroup(String conferenceId,
 	    String whisperGroupId, boolean isTransient) throws ParseException {
 
 	synchronized (conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
 	    conferenceManager.getWGManager().setTransientWhisperGroup(
@@ -319,11 +321,11 @@ public class ConferenceManager {
 	}
     }
 
-    public static void setLockedWhisperGroup(String conferenceId, 
+    public static void setLockedWhisperGroup(String conferenceId,
 	    String whisperGroupId, boolean isLocked) throws ParseException {
 
 	synchronized (conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
 	    conferenceManager.getWGManager().setLockedWhisperGroup(
@@ -331,11 +333,11 @@ public class ConferenceManager {
 	}
     }
 
-    public static void setWhisperGroupAttenuation(String conferenceId, 
+    public static void setWhisperGroupAttenuation(String conferenceId,
 	    String whisperGroupId, double attenuation) throws ParseException {
 
 	synchronized (conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
 	    conferenceManager.getWGManager().setWhisperGroupAttenuation(
@@ -343,32 +345,32 @@ public class ConferenceManager {
 	}
     }
 
-    public static void setWhisperGroupNoCommonMix(String conferenceId, 
+    public static void setWhisperGroupNoCommonMix(String conferenceId,
 	    String whisperGroupId, boolean noCommonMix) throws ParseException {
 
 	synchronized (conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
 	    synchronized (conferenceManager) {
 		WGManager wgManager = conferenceManager.getWGManager();
 
 		synchronized (wgManager.getWhisperGroups()) {
-	            wgManager.setWhisperGroupNoCommonMix(whisperGroupId, 
+	            wgManager.setWhisperGroupNoCommonMix(whisperGroupId,
 			noCommonMix);
 
 		    ArrayList memberList = conferenceManager.getMemberList();
 
 	 	    synchronized (memberList) {
 			for (int i = 0; i < memberList.size(); i++) {
-			    ConferenceMember member = (ConferenceMember) 
+			    ConferenceMember member = (ConferenceMember)
 				memberList.get(i);
 
 			    /*
 			     * Tell members
 			     */
 			    if (Logger.logLevel >= Logger.LOG_INFO) {
-			        Logger.println("Call " + member 
+			        Logger.println("Call " + member
 				    + " no common mix");
 			    }
 			    member.setNoCommonMix(whisperGroupId);
@@ -389,7 +391,7 @@ public class ConferenceManager {
         }
 
 	Logger.writeFile("ending conf " + conferenceId
-	    + ":  permanent " + permanent 
+	    + ":  permanent " + permanent
 	    + ", mediaPreference " + mediaPreference);
 
 	if (permanent) {
@@ -399,8 +401,8 @@ public class ConferenceManager {
 		try {
 		    setMediaInfo(mediaPreference);
 		} catch (ParseException e) {
-		    Logger.println(conferenceId 
-			+ ":  Can't change meeting media setting to " 
+		    Logger.println(conferenceId
+			+ ":  Can't change meeting media setting to "
 			+ mediaPreference + ": " + e.getMessage());
 		}
 
@@ -414,7 +416,7 @@ public class ConferenceManager {
 	    done = true;
 
 	    ConferenceManager.conferenceEventNotification(
-		new ConferenceEvent(ConferenceEvent.CONFERENCE_ENDED, 
+		new ConferenceEvent(ConferenceEvent.CONFERENCE_ENDED,
 		conferenceId));
 
 	    synchronized(conferenceList) {
@@ -432,7 +434,7 @@ public class ConferenceManager {
 
 	synchronized(conferenceList) {
             for (int i = 0; i < conferenceList.size(); i++) {
-	        ConferenceManager conferenceManager = 
+	        ConferenceManager conferenceManager =
 		    (ConferenceManager) conferenceList.get(i);
 
 	        if (conferenceManager.getMemberList().size() > 0) {
@@ -472,7 +474,7 @@ public class ConferenceManager {
 	    }
 	}
     }
-	
+
     public static int getNumberOfConferences() {
 	return conferenceList.size();
     }
@@ -481,10 +483,10 @@ public class ConferenceManager {
 	return totalMembers;
     }
 
-    public static int getNumberOfMembers(String conferenceId) 
+    public static int getNumberOfMembers(String conferenceId)
 	    throws ParseException {
 
-	ConferenceManager conferenceManager = 
+	ConferenceManager conferenceManager =
 	    findConferenceManager(conferenceId);
 
 	return conferenceManager.getNumberOfMembers();
@@ -493,7 +495,7 @@ public class ConferenceManager {
     public int getNumberOfMembers() {
 	if (distributedBridge != null) {
 	    return distributedBridge.getNumberOfMembers(conferenceId);
-	} 
+	}
 
 	return getMemberList().size();
     }
@@ -513,7 +515,7 @@ public class ConferenceManager {
 
     public static String getDisplayName(String conferenceId) {
 	try {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 	    return conferenceManager.getDisplayName();
 	} catch (ParseException e) {
@@ -569,7 +571,7 @@ public class ConferenceManager {
 
     /**
      * Is this the first member.  The first member to call this gets true.
-     * Others get false.  This is so that the first member can get a special 
+     * Others get false.  This is so that the first member can get a special
      * audio treatment.
      * @return true if this is the first member, false otherwise
      */
@@ -589,9 +591,9 @@ public class ConferenceManager {
      * Add a new member to the conference
      *
      * @param cp  CallParticipant wishing to join the conference.
-     * @return ConferenceMember 
-     */ 
-    public ConferenceMember joinConference(CallParticipant cp) 
+     * @return ConferenceMember
+     */
+    public ConferenceMember joinConference(CallParticipant cp)
 	    throws IOException {
 
         if (conferenceJoinTreatment != null) {
@@ -637,7 +639,7 @@ public class ConferenceManager {
     public static boolean hasCommonMix(String conferenceId) {
 	synchronized(conferenceList) {
 	    try {
-                ConferenceManager conferenceManager = 
+                ConferenceManager conferenceManager =
 		    findConferenceManager(conferenceId);
 	        return conferenceManager.hasCommonMix();
 	    } catch (ParseException e) {
@@ -668,7 +670,7 @@ public class ConferenceManager {
     /*
      * Transfer an incoming call to the target conference.
      */
-    public void transferMember(ConferenceManager newConferenceManager, 
+    public void transferMember(ConferenceManager newConferenceManager,
 	    ConferenceMember member) throws IOException {
 
 	leave(member, true);		   // leave the temporary conference
@@ -705,7 +707,7 @@ public class ConferenceManager {
 	        }
 
 	        Logger.println("conferenceManager:  '" + conferenceId
-		    + "':  member " + member.toString() 
+		    + "':  member " + member.toString()
 		    + " leaving, remaining:  " + memberList.size());
 	    }
 
@@ -775,7 +777,7 @@ public class ConferenceManager {
 	    loneConferenceSender = new ConferenceSender(conferenceList);
 
             for (int i = 0; i < conferenceList.size(); i++) {
-                ConferenceManager conferenceManager = 
+                ConferenceManager conferenceManager =
 		    (ConferenceManager) conferenceList.get(i);
 
 		synchronized (conferenceManager) {
@@ -803,8 +805,8 @@ public class ConferenceManager {
 	    }
 	}
     }
-	
-    public static void setLoneReceiverPort(int loneReceiverPort) 
+
+    public static void setLoneReceiverPort(int loneReceiverPort)
 	    throws ParseException {
 
 	if (ConferenceManager.loneReceiverPort == loneReceiverPort) {
@@ -848,13 +850,13 @@ public class ConferenceManager {
 	    String mediaPreference, String displayName) throws ParseException {
 
 	synchronized(conferenceList) {
-	    ConferenceManager conferenceManager = 
+	    ConferenceManager conferenceManager =
 		getConference(conferenceId, mediaPreference, displayName, true);
 
 	    if (conferenceManager.getMemberList().size() == 0) {
 		if (Logger.logLevel >= Logger.LOG_INFO) {
 		    Logger.println("Conference " + conferenceId
-		        + " setting media preference to " 
+		        + " setting media preference to "
 		        + mediaPreference);
 		}
 
@@ -868,11 +870,11 @@ public class ConferenceManager {
 		    } catch (ParseException ee) {
 		    }
 
-		    Logger.println(conferenceId 
-			+ ":  Can't change meeting media setting to " 
+		    Logger.println(conferenceId
+			+ ":  Can't change meeting media setting to "
 			+ mediaPreference + ": " + e.getMessage());
-		    throw new ParseException(conferenceId 
-			+ ":  Can't change meeting media setting to " 
+		    throw new ParseException(conferenceId
+			+ ":  Can't change meeting media setting to "
 			+ mediaPreference + ": " + e.getMessage(), 0);
 		}
 	    } else {
@@ -881,7 +883,7 @@ public class ConferenceManager {
 		 */
 		if (Logger.logLevel >= Logger.LOG_INFO) {
 		    Logger.println("Conference " + conferenceId
-		        + " defer setting media preference to " 
+		        + " defer setting media preference to "
 		        + mediaPreference);
 		}
 
@@ -890,16 +892,16 @@ public class ConferenceManager {
 	}
     }
 
-    public static void removeConference(String conferenceId) 
+    public static void removeConference(String conferenceId)
 	    throws ParseException {
 
 	synchronized(conferenceList) {
-            ConferenceManager conferenceManager = 
+            ConferenceManager conferenceManager =
 		findConferenceManager(conferenceId);
 
 	    if (conferenceManager.getMemberList().size() > 0) {
 		throw new ParseException("can't remove conference:  '"
-            	    + conferenceId 
+            	    + conferenceId
 		    + "' because there are still calls in progress", 0);
 	    }
 
@@ -911,7 +913,7 @@ public class ConferenceManager {
     /*
      * End a conference
      */
-    public static void endConference(String conferenceId) 
+    public static void endConference(String conferenceId)
 	    throws ParseException {
 
 	ConferenceManager conferenceManager;
@@ -948,7 +950,7 @@ public class ConferenceManager {
 	    String conferenceId) throws ParseException {
 
 	for (int i = 0; i < conferenceList.size(); i++) {
-	    ConferenceManager conferenceManager = (ConferenceManager) 
+	    ConferenceManager conferenceManager = (ConferenceManager)
 		conferenceList.get(i);
 
 	    if (conferenceManager.getId().equals(conferenceId)) {
@@ -980,7 +982,7 @@ public class ConferenceManager {
 
     public static ConferenceManager getConference(CallParticipant cp) {
 
-	return getConference(cp.getConferenceId(), cp.getMediaPreference(), 
+	return getConference(cp.getConferenceId(), cp.getMediaPreference(),
 	    cp.getConferenceDisplayName(), false);
     }
 
@@ -1000,19 +1002,19 @@ public class ConferenceManager {
 	    conferenceManager = findConferenceManager(conferenceId);
 
 	    if (Logger.logLevel >= Logger.LOG_INFO) {
-	        Logger.println("found existing conference:  '" 
+	        Logger.println("found existing conference:  '"
 		    + conferenceId + "'");
 	    }
-	    return conferenceManager;	
+	    return conferenceManager;
 	} catch (ParseException e) {
 	}
 
 	try {
-	    conferenceManager = 
+	    conferenceManager =
 		new ConferenceManager(conferenceId, mediaPreference,
 		    displayName);
 	} catch (SocketException e) {
-	    Logger.error("Can't create conference " + conferenceId 
+	    Logger.error("Can't create conference " + conferenceId
 	        + " " + e.getMessage());
 
 	    return null;
@@ -1022,8 +1024,8 @@ public class ConferenceManager {
 	    conferenceList.add(conferenceManager);
 	}
 
-	Logger.println("starting new conference:  '" 
-	    + conferenceId + "'.  " 
+	Logger.println("starting new conference:  '"
+	    + conferenceId + "'.  "
 	    + " conferences in progress:  " + conferenceList.size());
 
 	conferenceManager.setPermanent(permanent);
@@ -1093,7 +1095,7 @@ public class ConferenceManager {
 	    for (int i = 0; i < conferenceList.size(); i++) {
 		ConferenceManager conferenceManager = (ConferenceManager)
 		    conferenceList.get(i);
-  
+
 		String id = conferenceManager.getId();
 
 		String displayName = conferenceManager.getDisplayName();
@@ -1122,7 +1124,7 @@ public class ConferenceManager {
 		    s += " persistent";
 		}
 
-		String recordingFile = 
+		String recordingFile =
 		    conferenceManager.getWGManager().getRecordingFile();
 
 		if (recordingFile != null) {
@@ -1136,10 +1138,10 @@ public class ConferenceManager {
 		}
 
 		/*
-		 * Copy the member list so we can avoid unnecessary 
+		 * Copy the member list so we can avoid unnecessary
 		 * synchronization
 		 */
-		ArrayList memberList = (ArrayList) 
+		ArrayList memberList = (ArrayList)
 		    conferenceManager.getMemberList().clone();
 
 		for (int n = 0; n < memberList.size(); n++) {
@@ -1155,23 +1157,23 @@ public class ConferenceManager {
 
 		    if (transmitMediaInfo != null) {
 		        info += transmitMediaInfo.toString();
-		    } 
+		    }
 
 		    MediaInfo receiveMediaInfo = memberReceiver.getMediaInfo();
 
-		    if (receiveMediaInfo != null) { 
+		    if (receiveMediaInfo != null) {
 			if (transmitMediaInfo.getEncoding() !=
 			        receiveMediaInfo.getEncoding() ||
 			        transmitMediaInfo.getSampleRate() !=
 			        receiveMediaInfo.getSampleRate() ||
 			        transmitMediaInfo.getChannels() !=
 			        receiveMediaInfo.getChannels()) {
-			    
+
 			    /*
 			     * The member is transmitting at a different
 			     * media setting than it is receiving.
 			     */
-			    info += " Transmit:" 
+			    info += " Transmit:"
 				+ memberReceiver.getMediaInfo();
 			}
 		    }
@@ -1181,26 +1183,26 @@ public class ConferenceManager {
 		    if (cp.isMuted()) {
 		        info += " MUTED";
 		    }
-		    	
+
 		    if (cp.isConferenceMuted()) {
 		        info += " CONFERENCE_MUTED";
 		    }
-		    	
+
 		    if (cp.isConferenceSilenced()) {
 			info += " MAIN_CONFERENCE_SILENCED";
 		    }
 
 		    if (memberReceiver.doNotRecord() == true) {
 		        info += " RECORDED NOT ALLOWED";
-		    } 
-    
+		    }
+
     	            if (memberReceiver.getFromRecordingFile() != null) {
-    		        info += " Recording from member in " 
+    		        info += " Recording from member in "
     			    + memberReceiver.getFromRecordingFile();
     		    }
 
 		    if (cp.isRecorder()) {
-		        String toRecordingFile = 
+		        String toRecordingFile =
 			    memberSender.getCallParticipant().getToRecordingFile();
 
     	                if (toRecordingFile != null) {
@@ -1220,7 +1222,7 @@ public class ConferenceManager {
 		    if (memberSender.getSendAddress() != null) {
 			String gateway = "";
 
-			String address = 
+			String address =
 			    memberSender.getSendAddress().toString();
 
 			int ix = address.indexOf("/");
@@ -1232,7 +1234,7 @@ public class ConferenceManager {
 				address = address.substring(0, ix);
 			    }
 			}
-		
+
 			if (address.equals("10.6.4.192")) {
 			    gateway = " Menlo Park Gateway";
 			} else if (address.equals("129.148.75.22")) {
@@ -1275,10 +1277,10 @@ public class ConferenceManager {
         synchronized(conferenceList) {
 	    ConferenceManager conferenceManager;
 
-	    if ((conferenceManager = findConferenceManager(conferenceId)) != 
+	    if ((conferenceManager = findConferenceManager(conferenceId)) !=
 		    null) {
 
-		conferenceManager.recordConference(enabled, recordingFile, 
+		conferenceManager.recordConference(enabled, recordingFile,
 		    recordingType);
 
 		return;
@@ -1362,11 +1364,11 @@ public class ConferenceManager {
 	return conferenceAnswerTreatment;
     }
 
-    public static void playTreatmentToAllConferences(String treatment, 
+    public static void playTreatmentToAllConferences(String treatment,
 	    double[] volume) throws ParseException {
     }
 
-    public static void playTreatmentToAllConferences(String treatment) 
+    public static void playTreatmentToAllConferences(String treatment)
 	    throws ParseException {
 
         synchronized(conferenceList) {
@@ -1379,21 +1381,21 @@ public class ConferenceManager {
 	}
     }
 
-    public static void playTreatment(String conferenceId, 
+    public static void playTreatment(String conferenceId,
 	    String treatment, double[] volume) throws ParseException {
     }
 
     /**
      * Play a treatment to the specified conference
      */
-    public static void playTreatment(String conferenceId, 
+    public static void playTreatment(String conferenceId,
 	    String treatment) throws ParseException {
 
 	if (Logger.logLevel >= Logger.LOG_MOREINFO) {
-	    Logger.println("playing treatment " + treatment + " to " 
+	    Logger.println("playing treatment " + treatment + " to "
 		+ conferenceId);
 	}
-	
+
         synchronized(conferenceList) {
 	    ConferenceManager conferenceManager;
 
@@ -1450,11 +1452,11 @@ public class ConferenceManager {
         }
     }
 
-    public static void stopTreatment(String conferenceId, String treatment) 
+    public static void stopTreatment(String conferenceId, String treatment)
 	    throws ParseException {
 
         if (Logger.logLevel >= Logger.LOG_MOREINFO) {
-	    Logger.println("stopping treatment " + treatment + " to " 
+	    Logger.println("stopping treatment " + treatment + " to "
 		+ conferenceId);
 	}
 
@@ -1478,10 +1480,10 @@ public class ConferenceManager {
 	    }
 
             for (int i = 0; i < conferenceList.size(); i++) {
-                ConferenceManager conferenceManager = 
+                ConferenceManager conferenceManager =
 		    (ConferenceManager) conferenceList.get(i);
 
-		ConferenceSender conferenceSender = 
+		ConferenceSender conferenceSender =
                     conferenceManager.getConferenceSender();
 
 		if (loneConferenceSender == null) {

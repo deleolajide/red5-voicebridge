@@ -1,0 +1,127 @@
+<html>
+<head>
+<title>Voice Bridge Test</title>
+<script type="text/javascript" src="swfobject.js"></script>
+<script type="text/javascript">
+
+	var voiceBridge = null;
+	var uid = Math.random().toString(36).substr(2,9);
+
+	function startApp()
+	{
+		voiceBridge = document.getElementById("voiceBridgeID");
+	}
+
+	function stopApp()
+	{
+		if (voiceBridge != null)
+		{
+			voiceBridge.windowCloseEvent();
+		}
+	}
+
+
+	function manageCallParticipant()
+	{
+		if (voiceBridge != null)
+		{
+			voiceBridge.manageCallParticipant(uid, document.getElementById("cpParam").value, document.getElementById("cpValue").value);
+
+		}
+	}
+
+	function manageVoiceBridge()
+	{
+		if (voiceBridge != null)
+		{
+			voiceBridge.manageVoiceBridge(document.getElementById("vbParam").value, document.getElementById("vbValue").value);
+		}
+	}
+
+
+	function callsEventNotification(eventSource, event, state, info, dtmf, treatmentdId, noOfCalls, callId, confId, callInfo)
+	{
+		var text = document.getElementById("eventsDIV").innerHTML;
+
+		text = eventSource +  ": "  + event + " State " + state + " Info " + info + " DTMF " + dtmf + " Treatment " + treatmentdId + " #Calls " + noOfCalls + " CallId " + callId + " confid " + confId + " callInfo " + callInfo + "<br/>" + text;
+
+		document.getElementById("eventsDIV").innerHTML = text;
+	}
+
+	function errorEventNotification(error)
+	{
+		var text = document.getElementById("eventsDIV").innerHTML;
+
+		text = "Error " + error + "<br/>" + text;
+
+		document.getElementById("eventsDIV").innerHTML = text;
+
+	}
+
+	function infoEventNotification(info)
+	{
+		var text = document.getElementById("eventsDIV").innerHTML;
+
+		text = "Info " + info + "<br/>" + text;
+
+		document.getElementById("eventsDIV").innerHTML = text;
+	}
+
+	function statisticsNotification(numberOfConferences, totalMembers, totalSpeaking, timeBetweenSends, averageSendTime, maxSendTime)
+	{
+		var text = document.getElementById("eventsDIV").innerHTML;
+
+		text = "#Confs " + numberOfConferences + " #Members " + totalMembers + " #Speaking " + totalSpeaking + "<br/>" + text;
+		text = "timeBetweenSends " + timeBetweenSends + " averageSendTime " + averageSendTime + " maxSendTime " + maxSendTime + "<br/>" + text;
+
+		document.getElementById("eventsDIV").innerHTML = text;
+	}
+</script>
+
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onLoad="startApp()" onUnload="stopApp()">
+<center>
+<div id="voiceBridgeDIV"></div>
+<script type="text/javascript">
+		fo = new SWFObject("VoiceBridge.swf?rtmpUrl=rtmp:/voicebridge", "voiceBridgeID", "0", "0", "9");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "voiceBridgeID");
+		fo.write("voiceBridgeDIV");
+</script>
+</center>
+<table>
+<tr valign='top'><th>Parameter</th><th>Inputs</th><th></th></tr>
+<tr valign='top'>
+	<td>
+		<select id='cpParam'>
+			<option value='create'>Create Call Participant</option>
+			<option value='destroy'>Destroy Call Participant</option>
+			<option value='phoneNumber'>Phone Number</option>
+			<option value='conferenceid'>Set Conference Id</option>
+			<option value='secondPartyNumber'>Second Party Number</option>
+			<option value='makeCall'>Make Call</option>
+			<option value='cancelCall'>Cancel Call</option>
+		</select>
+	</td>
+	<td><input type='text' id='cpValue' size='30'></td>
+	<td><button onclick='manageCallParticipant()'>manageCallParticipant</button></td>
+</tr>
+<tr valign='top'>
+	<td>
+		<select id='vbParam'>
+			<option value='monitorConferenceStatus'>Monitor Conference Status</option>
+			<option value='monitorOutgoingCalls'>Monitor Outgoing Calls</option>
+			<option value='monitorIncomingCalls'>Monitor Incoming Calls</option>
+			<option value='monitorCallStatus'>Monitor Call Status</option>
+			<option value='getStatistics'>Get Statistics</option>
+			<option value='createConference'>Create Conference</option>
+			<option value='transferCall'>Transfer to another Conference</option>
+		</select>
+	</td>
+	<td><input type='text' id='vbValue' size='30' value='true:IncomingCallsConference'></td>
+<td><button onclick='manageVoiceBridge()'>manageVoiceBridge</button></td>
+</tr>
+</table>
+<div id='eventsDIV'/>
+</body>
+</html>
