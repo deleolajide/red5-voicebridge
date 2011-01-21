@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -36,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 
 import java.util.ArrayList;
+import org.red5.server.webapp.voicebridge.Application;
 
 /**
  * Initiate a call, and join a conference
@@ -50,58 +51,58 @@ import java.util.ArrayList;
  */
 public class OutgoingCallHandler extends CallHandler
         implements CallEventListener {
-    
+
     private CallEventListener csl;
-    
+
     private Integer callInitiatedLock = new Integer(0);
     private Integer stateChangeLock = new Integer(0);
     private Integer waitCallAnswerLock = new Integer(0);
     private Integer waitCallEstablishedLock = new Integer(0);
-    
+
     private boolean lastGateway = false;
     private boolean onlyOneGateway = false;
-    
+
     public OutgoingCallHandler(CallEventListener callEventListener,
             CallParticipant cp) {
-        
+
 	addCallEventListener(this);
         csl = callEventListener;
         this.cp = cp;
 
 	setName("Outgoing CallHandler for " + cp);
     }
-    
+
     public CallEventListener getRequestHandler() {
         return csl;
     }
-    
+
     /*
      * Thread to start a new call and join a conference.
      */
     private static int nCalls = 0;	// for debugging two gateways
-    
+
     public void run() {
         /*
          * Join an existing conference or create a new one.
          */
         synchronized (ConferenceManager.getConferenceList()) {
             conferenceManager = ConferenceManager.getConference(cp);
-            
+
             if (conferenceManager == null) {
                 Logger.error("Couldn't start conference "
                         + cp.getConferenceId());
-                
+
                 sendCallEventNotification(
 		    new CallEvent(CallEvent.CANT_START_CONFERENCE));
                 return;
             }
-            
+
             try {
                 member = conferenceManager.joinConference(cp);
                 memberSender = member.getMemberSender();
                 memberReceiver = member.getMemberReceiver();
             } catch (IOException e) {
-		CallEvent callEvent = 
+		CallEvent callEvent =
 		    new CallEvent(CallEvent.CANT_CREATE_MEMBER);
 
 		callEvent.setInfo(e.getMessage());
@@ -111,25 +112,25 @@ public class OutgoingCallHandler extends CallHandler
                 return;
             }
         }
-        
+
 	addCall(this);		// add to list of active calls
-        
+
         lastGateway = false;
 	onlyOneGateway = false;
-        
+
         /*
          * Start the call (INVITE) and wait for it to end (BYE).
          */
         ArrayList voIPGateways = SipServer.getVoIPGateways();
         String gateway = cp.getVoIPGateway();
-        
+
         if (gateway != null) {
             /*
              * User specified a specific gateway.  Use that one only.
              */
             Logger.println("Call " + this
                     + ":  Using gateway specified for the call:  " + gateway);
-            
+
             lastGateway = true;
 	    onlyOneGateway = true;
             placeCall();
@@ -145,34 +146,34 @@ public class OutgoingCallHandler extends CallHandler
                 reasonCallEnded = null;
 
                 String voIPGateway = (String) voIPGateways.get(i);
-                
+
                 cp.setVoIPGateway(voIPGateway);
-                
+
                 if (i == voIPGateways.size() - 1) {
                     lastGateway = true;
                 }
-                
+
                 placeCall();
-                
+
                 if (reasonCallEnded.indexOf("gateway error") < 0) {
                     break;
                 }
             }
         } else {
             Logger.println("Call " + this + " placed without gateway");
-            
+
             // no gateways, just try to place the call
             lastGateway = true;
             placeCall();
         }
-        
+
         conferenceManager.leave(member); // Remove member from conference.
-        
+
         removeCall(this);		 // remove call from active call list
 	removeCallEventListener(this);
         done = true;
     }
-    
+
     private void placeCall() {
 	String protocol = Bridge.getDefaultProtocol();
 
@@ -186,7 +187,7 @@ public class OutgoingCallHandler extends CallHandler
 	    csa = new NSOutgoingCallAgent(this);
 	} else {
 	    //csa = new H323TPCCallAgent(this);
-	    reasonCallEnded = 
+	    reasonCallEnded =
 		CallEvent.getEventString(CallEvent.H323_NOT_IMPLEMENTED);
 
 	    sendCallEventNotification(
@@ -195,10 +196,10 @@ public class OutgoingCallHandler extends CallHandler
 	    Logger.println("Call " + cp + ":  " + reasonCallEnded);
 	    return;
 	}
-        
+
         try {
             csa.initiateCall();
-            
+
 	    synchronized (callInitiatedLock) {
 	        callInitiatedLock.notifyAll();
 	    }
@@ -233,9 +234,9 @@ public class OutgoingCallHandler extends CallHandler
             Logger.println("Call " + this + " Exception " + e.getMessage());
         }
     }
-    
+
     /*
-     * This method is called where there is new status information.  
+     * This method is called where there is new status information.
      * Status can be a state change, dtmf key pressed,
      * or speaking not speaking notification.
      */
@@ -263,7 +264,7 @@ public class OutgoingCallHandler extends CallHandler
             } else if (callEvent.getCallState().equals(CallState.ENDING)) {
                 CallHandler callHandler =
                     CallHandler.findMigratingCall(cp.getCallId());
-            
+
                 if (callHandler == this) {
                     /*
                      * If it's a gateway error and it's not the last gateway,
@@ -272,10 +273,10 @@ public class OutgoingCallHandler extends CallHandler
                      */
                     if (callEvent.getInfo().indexOf("gateway error") >= 0 &&
                             lastGateway == false) {
-                    
+
                         return;
                     }
-                
+
 		    callEvent = new CallEvent(CallEvent.MIGRATION_FAILED);
 
 		    callEvent.setInfo("Migration failed: " + getReasonCallEnded());
@@ -283,17 +284,17 @@ public class OutgoingCallHandler extends CallHandler
                 }
             } else if (callEvent.getCallState().equals(CallState.ENDED)) {
                 reasonCallEnded = callEvent.getInfo();
-            
+
                 synchronized(waitCallAnswerLock) {
                     waitCallAnswerLock.notify();
                 }
-            
+
                 if (reasonCallEnded.indexOf("gateway error") >= 0 &&
                         lastGateway == false) {
-                
+
                     CallHandler callHandler =
                         CallHandler.findMigratingCall(cp.getCallId());
-                
+
                     if (callHandler == this) {
                         synchronized(stateChangeLock) {
                             /*
@@ -305,15 +306,15 @@ public class OutgoingCallHandler extends CallHandler
                         return;	// don't tell the migrator yet
                     }
                 }
-            
+
                 synchronized(waitCallEstablishedLock) {
                     waitCallEstablishedLock.notify();
                 }
-            
+
                 synchronized(stateChangeLock) {
                     stateChangeLock.notify();	// the call has ended
                 }
-            
+
                 /*
                  * If it's a gateway error and not the last gateway,
                  * don't end the call.  It will be retried with the
@@ -321,20 +322,20 @@ public class OutgoingCallHandler extends CallHandler
                  */
                 if (reasonCallEnded.indexOf("gateway error") >= 0 &&
                         lastGateway == false) {
-                
+
                     return;
                 }
-            
+
                 cancelRequest(reasonCallEnded);
             }
 	}
-        
+
         if (suppressEvent(cp, callEvent) == false) {
-            RequestHandler.outgoingCallNotification(callEvent);
+            Application.outgoingCallNotification(callEvent);
 	    csl.callEventNotification(callEvent);
-        } 
+        }
     }
-    
+
     /*
      * This method is called by a CallSetupAgent once the endpoint
      * address is known.  The endpoint address is the address from which
@@ -342,11 +343,11 @@ public class OutgoingCallHandler extends CallHandler
      */
     //public void setEndpointAddress(InetSocketAddress isa, byte mediaPayload,
     //	    byte receivePayload, byte telephoneEventPayload) {
-    //    
+    //
     //    member.initialize(this, isa, mediaPayload, receivePayload,
     //	    telephoneEventPayload);
     //}
-    
+
     /*
      * To make call migration and automatic retries to alternate gateways
      * transparent to the facilitator, we need to suppress certain
@@ -366,8 +367,8 @@ public class OutgoingCallHandler extends CallHandler
          * will be delivered to the client
          */
         if (suppressStatus == true) {
-            if (callEvent.getInfo() != null && 
-		    callEvent.getInfo().indexOf("No Answer") >= 0 || 
+            if (callEvent.getInfo() != null &&
+		    callEvent.getInfo().indexOf("No Answer") >= 0 ||
 		    callEvent.equals(CallEvent.BUSY_HERE) ||
 		    callEvent.equals(CallEvent.CALL_ANSWER_TIMEOUT) ||
 		    callEvent.equals(CallEvent.MIGRATED) ||
@@ -376,10 +377,10 @@ public class OutgoingCallHandler extends CallHandler
 
                 return false;
             }
-            
+
             return true;
         }
-        
+
         /*
          * We automatically retry calls with an alternate gateway
          * when there is a gateway error.  The status sent to the
@@ -396,57 +397,57 @@ public class OutgoingCallHandler extends CallHandler
             if (callEvent.getInfo().indexOf("gateway error") >= 0) {
                 return true;
             }
-            
+
             return false;
         }
-        
+
         /*
          * Suppress CALL_PARTICIPANT_INVITED message from alternate gateway
          */
-	if (onlyOneGateway == false && callEvent.equals(CallEvent.STATE_CHANGED) && 
+	if (onlyOneGateway == false && callEvent.equals(CallEvent.STATE_CHANGED) &&
 	        callEvent.getCallState().equals(CallState.INVITED)) {
 
             return true;
         }
-        
+
         /*
          * No need to suppress this message.
          */
         return false;
     }
-    
+
     /*
      * terminate a call.
      */
     public void cancelRequest(String reason) {
         done = true;
-        
+
         if (csa != null) {
             CallHandler migratingCall =
                     CallHandler.findMigratingCall(cp.getCallId());
-            
+
             if (migratingCall == this) {
                 Logger.println("Failed to Migrate:  " + reason);
             }
-            
+
             csa.cancelRequest(reason);
         }
-        
+
         synchronized(waitCallAnswerLock) {
             waitCallAnswerLock.notify();
         }
-        
+
         CallHandler otherCall = this.otherCall;
-        
+
         this.otherCall = null;
-        
+
         if (otherCall != null) {
             Logger.println("otherCall is " + otherCall.getCallParticipant());
-            
+
             otherCall.cancelRequest("Two party call ended");
         }
     }
-    
+
     public String getSdp() {
 	synchronized (callInitiatedLock) {
             while (csa == null && !done && reasonCallEnded == null) {
@@ -465,11 +466,11 @@ public class OutgoingCallHandler extends CallHandler
      * When one party hangs up, the other call should be terminated as well.
      */
     //private OutgoingCallHandler otherCall;
-    
+
     public void setOtherCall(OutgoingCallHandler otherCall) {
         this.otherCall = otherCall;
     }
-    
+
     /*
      * For two party calls, we wait until the first party answers
      * before calling the second party.
@@ -485,47 +486,47 @@ public class OutgoingCallHandler extends CallHandler
             if (done || reasonCallEnded != null) {
                 return false;
             }
-            
+
             try {
                 waitCallAnswerLock.wait();
             } catch (InterruptedException e) {
             }
         }
-        
+
         if (done || reasonCallEnded != null) {
             return false;
         }
-        
+
         return true;
     }
-    
+
     public boolean waitForCallToBeEstablished() {
         synchronized(waitCallEstablishedLock) {
             if (done || reasonCallEnded != null) {
                 return false;
             }
-            
+
             try {
                 waitCallEstablishedLock.wait();
             } catch (InterruptedException e) {
             }
         }
-        
+
         if (done || reasonCallEnded != null) {
             return false;
         }
-        
+
         return true;
     }
-    
+
     /*
      * Cancel all calls started by the specified requestHandler
      */
-    public static void hangup(CallEventListener callEventListener, 
+    public static void hangup(CallEventListener callEventListener,
 	    String reason) {
 
         ArrayList<CallHandler> callsToCancel = new ArrayList();
-        
+
         synchronized(activeCalls) {
             /*
              * Make a list of all the calls we want to cancel, then cancel them.
@@ -534,23 +535,23 @@ public class OutgoingCallHandler extends CallHandler
              */
             for (int i = 0; i < activeCalls.size(); i++) {
                 CallHandler call = (CallHandler)activeCalls.elementAt(i);
-                
+
                 if (call.getRequestHandler() == callEventListener) {
                     callsToCancel.add(call);
                 }
             }
         }
-        
+
         cancel(callsToCancel, reason);
     }
-    
+
     private static void cancel(ArrayList<CallHandler> callsToCancel, String reason) {
         while (callsToCancel.size() > 0) {
             CallHandler call = callsToCancel.remove(0);
             call.cancelRequest(reason);
         }
     }
-    
+
     /**
      * String representation of this OutgoingCallHandler
      * @return the string representation of this OutgoingCallHandler
@@ -558,5 +559,5 @@ public class OutgoingCallHandler extends CallHandler
     public String toString() {
         return cp.toString();
     }
-    
+
 }

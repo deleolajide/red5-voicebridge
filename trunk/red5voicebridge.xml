@@ -2,7 +2,8 @@
 <config>
 	<privateHost>192.168.1.70</privateHost>
 	<publicHost>192.168.1.70</publicHost>	
-	<conferences>
+	
+	<conferences exten='3000'>
 		<conference id='2222' pin='2222' />
 		<conference id='1111' pin='1111' />		
 	</conferences>

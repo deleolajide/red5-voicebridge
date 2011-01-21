@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" creationComplete="init()" width="1" height="1">
+
+<mx:Script>
+<![CDATA[
+
+	import flash.net.NetConnection;
+	import flash.external.*;
+
+	private var netConnection:NetConnection = null;
+	private var incomingNetStream:NetStream = null;
+	private var rtmpUrl:String = "rtmp:/voicebridge";
+
+
+	private function init():void {
+
+		rtmpUrl = Application.application.parameters.rtmpUrl;
+					
+		ExternalInterface.addCallback("windowCloseEvent", windowCloseEvent);		
+		ExternalInterface.addCallback("manageCallParticipant", manageCallParticipant);	
+		ExternalInterface.addCallback("manageVoiceBridge", manageVoiceBridge);				
+		
+		//NetConnection.defaultObjectEncoding = flash.net.ObjectEncoding.AMF0;	
+		netConnection = new NetConnection();
+		//netConnection.objectEncoding = ObjectEncoding.AMF0;
+		netConnection.client = this;
+		netConnection.addEventListener( NetStatusEvent.NET_STATUS , netStatus );
+		netConnection.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
+		
+		netConnection.connect(rtmpUrl);
+	}
+
+	public function windowCloseEvent():void 
+	{
+		netConnection.close();
+	}
+	
+	public function manageCallParticipant(uid:String, param:String, value:String):void 
+	{
+		netConnection.call("manageCallParticipant", null, uid, param, value);
+	}
+	
+	public function manageVoiceBridge(param:String, value:String):void 
+	{
+		netConnection.call("manageVoiceBridge", null, param, value);
+	}
+
+	
+	public function callsEventNotification(eventSource:String, callEvent:String, callState:String, info:String, callDtmf:String, treatmentdId:String, noOfCalls:String, callId:String, confId:String, callInfo:String):*
+	{
+		ExternalInterface.call("callsEventNotification", eventSource, callEvent, callState, info, callDtmf, treatmentdId, noOfCalls, callId, confId, callInfo);
+	}
+	
+	public function errorEventNotification(error:String):*
+	{
+		ExternalInterface.call("errorEventNotification", error);
+	}
+	
+	public function infoEventNotification(info:String):*
+	{
+		ExternalInterface.call("infoEventNotification", info);
+	}	
+	
+	public function statisticsNotification(numberOfConferences:String, totalMembers:String, totalSpeaking:String, timeBetweenSends:String, averageSendTime:String, maxSendTime:String):*
+	{
+		ExternalInterface.call("statisticsNotification", numberOfConferences, totalMembers, totalSpeaking, timeBetweenSends, averageSendTime, maxSendTime);
+	}
+	
+	
+	private function netStatus (evt:NetStatusEvent ):void {		    	
+		switch(evt.info.code) {
+		
+		case "NetConnection.Connect.Success":
+			infoEventNotification("Connection success!");										
+			break;
+
+		case "NetConnection.Connect.Failed":
+			errorEventNotification("Failed to connect");
+			break;
+
+		case "NetConnection.Connect.Rejected":
+			errorEventNotification("Rejected");
+			break;
+
+		default:
+			errorEventNotification("NetStatus error code " + evt.info.code);
+		}		    	
+
+	}
+
+
+        private function securityErrorHandler(event:SecurityErrorEvent):void 
+        {
+            	ExternalInterface.call("errorEventNotification", "securityErrorHandler: " + event);
+        }
+        
+        
+]]>
+</mx:Script>
+</mx:Application>

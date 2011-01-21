@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip;
@@ -61,7 +61,7 @@ public class CallEvent {
         "269 DTMF",
         "270 MIGRATED",
         "275 MIGRATION FAILED no answer",
-	"279 CALL TRANSFERRED",
+		"279 CALL TRANSFERRED",
         "486 Busy Here",
         "900 Can't start conference",
         "910 Can't create member",
@@ -80,7 +80,7 @@ public class CallEvent {
     private String dtmfKey;
     private String treatmentId;
     private int numberOfCalls;
-  
+
     public CallEvent(int event) {
 	this.event = event;
 	info = "";
@@ -112,7 +112,7 @@ public class CallEvent {
 		break;
 	    }
 
-	    return;	
+	    return;
 	}
 
 	event = INFO;
@@ -125,7 +125,7 @@ public class CallEvent {
 	if (ix <= 0) {
 	    return "";
 	}
-	
+
 	return s.substring(0, ix);
     }
 
@@ -254,7 +254,7 @@ public class CallEvent {
 	if (event < 0 || event > LAST_EVENT) {
 	    return "Invalid Event:  " + event;
 	}
-	
+
 	return eventString[event];
     }
 
@@ -271,7 +271,7 @@ public class CallEvent {
 
 	if (info != null && info.length() > 0) {
 	    s += " " + info;
-	} 
+	}
 
 	if (event == DTMF_KEY) {
 	    s += " DTMFKey='" + dtmfKey + "'";
@@ -295,5 +295,5 @@ public class CallEvent {
 
 	return BridgeVersion.getVersion() + " " + s;
     }
-    
+
 }

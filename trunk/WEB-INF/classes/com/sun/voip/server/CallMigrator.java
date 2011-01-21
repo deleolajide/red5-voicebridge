@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -27,18 +27,19 @@ import com.sun.voip.CallParticipant;
 import com.sun.voip.CallEvent;
 import com.sun.voip.CallState;
 import com.sun.voip.Logger;
+import com.sun.voip.CallEventListener;
 
 public class CallMigrator extends Thread {
-    RequestHandler requestHandler;
+    CallEventListener requestHandler;
     CallParticipant cp;
 
-    public CallMigrator(RequestHandler requestHandler, CallParticipant cp) {
+    public CallMigrator(CallEventListener requestHandler, CallParticipant cp) {
 	this.requestHandler = requestHandler;
 	this.cp = cp;
     }
 
     /*
-     * Migrate a call.  Set up the new call, join the conference and 
+     * Migrate a call.  Set up the new call, join the conference and
      * terminate the original call.
      */
     public void run() {
@@ -59,7 +60,6 @@ public class CallMigrator extends Thread {
 	if (previousCall == null) {
 	    if (cp.getConferenceId() == null) {
 	        Logger.println("Call migrator can't find call Id " + callId);
-	        requestHandler.writeToSocket("Can't find call Id " + callId);
 		return;
 	    }
 
@@ -69,13 +69,10 @@ public class CallMigrator extends Thread {
 	    migrateWithNoPreviousCall(requestHandler, cp);
 	    return;
 	}
-		
+
 if (false) {
 	if (previousCall.isCallEstablished() == false) {
 	    Logger.println(
-		"Call migrator can't migrate call which is not established");
-
-	    requestHandler.writeToSocket(
 		"Call migrator can't migrate call which is not established");
 
 	    return;
@@ -92,7 +89,7 @@ if (false) {
 
 	cp.setMuted(previousCp.isMuted());	// preserve mute
 
-	Logger.println("Call migrating " + previousCp + " preserving mute " 
+	Logger.println("Call migrating " + previousCp + " preserving mute "
 	    + previousCp.isMuted());
 
 	if (cp.getConferenceId() == null) {
@@ -105,7 +102,7 @@ if (false) {
 
 	/*
 	 * SecondPartyNumber is the new number to call.
-	 * If it starts with "Id-", it's a callId of 
+	 * If it starts with "Id-", it's a callId of
 	 * a call already in progress.  Otherwise, it's a phone number to call.
 	 */
 	String secondParty = cp.getSecondPartyNumber();
@@ -114,8 +111,7 @@ if (false) {
 	    callHandler = CallHandler.findCall(secondParty.substring(3));
 
 	    if (callHandler == null) {
-		requestHandler.writeToSocket(
-		    "Can't find existing call to " + secondParty);
+		Logger.println("Can't find existing call to " + secondParty);
 		//Logger.logLevel = logLevel;
 		return;
 	    }
@@ -124,7 +120,7 @@ if (false) {
 	    cp.setCallId(previousCp.getCallId());
 	} else {
 	    /*
-	     * Invite the secondParty if call is not already setup.  
+	     * Invite the secondParty if call is not already setup.
 	     * After the party answers terminate the previous call.
 	     */
 	    cp.setPhoneNumber(cp.getSecondPartyNumber());
@@ -132,14 +128,13 @@ if (false) {
 
 	    /*
 	     * Use the request handler from the previous call (if there
-	     * is one) so that status changes will be sent to the same socket 
+	     * is one) so that status changes will be sent to the same socket
 	     * as the previous call.  This will make the migration seemless.
 	     */
-	    RequestHandler previousRequestHandler = (RequestHandler)
-		previousCall.getRequestHandler();
+	    CallEventListener previousCallEventListener = (CallEventListener) previousCall.getRequestHandler();
 
-	    if (previousRequestHandler != null) {
-		requestHandler = previousRequestHandler;
+	    if (previousCallEventListener != null) {
+		requestHandler = previousCallEventListener;
 	    }
 
 	    /*
@@ -152,7 +147,7 @@ if (false) {
 	     */
 	    previousCall.suppressStatus = true;
 
-	    OutgoingCallHandler newCall = 
+	    OutgoingCallHandler newCall =
 		new OutgoingCallHandler(requestHandler, cp);
 
 	    previousCall.getMember().migrating();
@@ -198,7 +193,7 @@ if (false) {
 		Logger.println("migrate mix descriptors for " + previousCall);
 	        newCall.getMember().migrate(previousCall.getMember());
 	    } else {
-		Logger.println("migrate:  previous call is not established " 
+		Logger.println("migrate:  previous call is not established "
 		    + previousCall);
 	    }
 	}
@@ -232,15 +227,15 @@ if (false) {
 	previousCp.setCallEndTreatment(null);
 	previousCp.setConferenceLeaveTreatment(null);
 
-	previousCall.cancelRequest("Call " + previousCp 
+	previousCall.cancelRequest("Call " + previousCp
 	    + " migrated to " + cp.getPhoneNumber());
     }
 
-    private void migrateWithNoPreviousCall(RequestHandler requestHandler, 
+    private void migrateWithNoPreviousCall(CallEventListener requestHandler,
 	    CallParticipant cp) {
 
         cp.setPhoneNumber(cp.getSecondPartyNumber());
-	
+
 	OutgoingCallHandler callHandler = new OutgoingCallHandler(requestHandler, cp);
 
 	synchronized(this) {
@@ -277,7 +272,7 @@ if (false) {
 	    Logger.println("Can't find migrating call for " + callId);
 	    return;
         }
-	
+
 	callHandler.cancelRequest(reason);
     }
 

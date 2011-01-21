@@ -38,6 +38,9 @@ import java.util.NoSuchElementException;
 import java.text.ParseException;
 
 import java.util.Vector;
+import org.red5.server.webapp.voicebridge.Application;
+
+import org.red5.server.webapp.voicebridge.Config;
 
 /**
  * Handle an incoming call.  The call is placed into a temporary conference.
@@ -57,7 +60,7 @@ public class IncomingCallHandler extends CallHandler
 
     private Object requestEvent;
 
-    boolean haveIncomingConferenceId;
+    boolean haveIncomingConferenceId = false;;
 
     private static String defaultIncomingConferenceId = "IncomingCallsConference";
 
@@ -78,45 +81,48 @@ public class IncomingCallHandler extends CallHandler
 	this(null, cp, requestEvent);
     }
 
-    public IncomingCallHandler(CallEventListener listener,
-	    CallParticipant cp, Object requestEvent) {
+    public IncomingCallHandler(CallEventListener listener, CallParticipant cp, Object requestEvent)
+    {
+		if (CallHandler.enablePSTNCalls() == false) {
+			Logger.println("Ignoring incoming call " + cp);
+			return;
+		}
 
-	if (CallHandler.enablePSTNCalls() == false) {
-	    Logger.println("Ignoring incoming call " + cp);
-	    return;
-	}
+		if (listener != null) {
+			addCallEventListener(listener);
+		}
 
-	if (listener != null) {
-	    addCallEventListener(listener);
-	}
+		this.cp = cp;
+		this.requestEvent = requestEvent;
 
-	this.cp = cp;
-	this.requestEvent = requestEvent;
+		addCallEventListener(this);
 
-	addCallEventListener(this);
+		if (Config.getInstance().getConferenceExten().equals(cp.getToPhoneNumber()))
+		{
+			incomingConferenceHandler = new IncomingConferenceHandler(this);
 
-	if (cp.getConferenceId() == null) {
-	    Logger.println("Don't have conf...");
+		} else {
 
-	    if (directConferencing == true) {
-			Logger.println("direct");
-	        incomingConferenceHandler = new IncomingConferenceHandler(this);
-	        //cp.setConferenceId(cp.getToPhoneNumber());
-	        //Logger.println("Using conf " + cp.getConferenceId());
-	        //haveIncomingConferenceId = true;
-	    }
-	} else {
-	    if (cp.getConferenceId().length() > 0) {
-	        Logger.println("Have conf " + cp.getConferenceId());
-	    } else {
-	        Logger.println(
-		    "Conference id length is 0, using 'DefaultConference'");
-			cp.setConferenceId("DefaultConference");
-	    }
-            haveIncomingConferenceId = true;
-	}
+			if (directConferencing == false)
+			{
+				if (cp.getConferenceId() == null || cp.getConferenceId().length() == 0)
+				{
+					Logger.println("Don't have conf, using default....");
+					cp.setConferenceId(defaultIncomingConferenceId); // wait in lobby
 
-	start();
+				} else {
+
+					Logger.println("Have conf " + cp.getConferenceId());
+					haveIncomingConferenceId = true; // goto your conference
+				}
+
+			} else {
+
+				return;	// reject, nobody monitoring and no passcode.
+			}
+		}
+
+		start();
     }
 
     public static void setDirectConferencing(boolean directConferencing) {
@@ -311,7 +317,10 @@ public class IncomingCallHandler extends CallHandler
 	     */
 	    Logger.println("Incoming notifying conf monitors call is estab");
 
-	    RequestHandler.notifyConferenceMonitors(callEvent);
+	    if (haveIncomingConferenceId == false) // not monitoring direct conferences, don't know conf yet
+	    {
+	    	Application.notifyConferenceMonitors(callEvent);
+		}
 
 	    if (incomingCallTreatment != null) {
 		try {
@@ -354,7 +363,7 @@ public class IncomingCallHandler extends CallHandler
 	 */
 	if (incomingConferenceHandler == null) {
 	    if (haveIncomingConferenceId == false) {
-	        RequestHandler.incomingCallNotification(callEvent);
+	        Application.incomingCallNotification(callEvent);
 	    }
 	}
     }
@@ -442,9 +451,8 @@ public class IncomingCallHandler extends CallHandler
 	return conferenceManager;
     }
 
-    public static ConferenceManager transferCall(String callId,
-	    String conferenceId) throws NoSuchElementException, IOException {
-
+    public static ConferenceManager transferCall(String callId, String conferenceId) throws NoSuchElementException, IOException
+    {
 	CallHandler callHandler = CallHandler.findCall(callId);
 
 	if (callHandler == null) {
@@ -459,9 +467,8 @@ public class IncomingCallHandler extends CallHandler
 	return transferCall(callHandler, conferenceId);
     }
 
-    private static ConferenceManager transferCall(CallHandler callHandler,
-	    String conferenceId) throws IOException {
-
+    private static ConferenceManager transferCall(CallHandler callHandler, String conferenceId) throws IOException
+    {
 	/*
 	 * Get current conference manager and member.
 	 */
@@ -512,6 +519,8 @@ public class IncomingCallHandler extends CallHandler
 	    + Bridge.getPrivateHost() + "'");
 
 	callHandler.sendCallEventNotification(event);
+
+	Application.notifyConferenceMonitors(event); // now, we monitor direct conferences as we know conf
 
 	return newConferenceManager;
     }
