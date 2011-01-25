@@ -99,7 +99,11 @@ public class IncomingCallHandler extends CallHandler
 
 		if (Config.getInstance().getConferenceExten().equals(cp.getToPhoneNumber()))
 		{
-			incomingConferenceHandler = new IncomingConferenceHandler(this);
+			incomingConferenceHandler = new IncomingConferenceHandler(this, cp.getToPhoneNumber());
+
+		} else if (Config.getInstance().getConferenceByPhone(cp.getToPhoneNumber()) != null) {
+
+			incomingConferenceHandler = new IncomingConferenceHandler(this, cp.getToPhoneNumber());
 
 		} else {
 
@@ -440,8 +444,7 @@ public class IncomingCallHandler extends CallHandler
 
 	ConferenceManager conferenceManager = transferCall(this, conferenceId);
 
-	String s = getNumberOfCallsAsTreatment(
-	    conferenceManager.getNumberOfMembers());
+	String s = getNumberOfCallsAsTreatment(conferenceManager.getNumberOfMembers());
 
 	playTreatmentToCall("you-are-caller-number.au;" + s);
 	setMuted(false);
@@ -460,11 +463,10 @@ public class IncomingCallHandler extends CallHandler
 	}
 
 	if (callHandler instanceof IncomingCallHandler == false) {
-	    throw new NoSuchElementException(
-		"Only incoming calls can be transferred:  " + callId);
+	    throw new NoSuchElementException("Only incoming calls can be transferred:  " + callId);
 	}
 
-	return transferCall(callHandler, conferenceId);
+	return ((IncomingCallHandler)callHandler).transferCall(conferenceId);
     }
 
     private static ConferenceManager transferCall(CallHandler callHandler, String conferenceId) throws IOException

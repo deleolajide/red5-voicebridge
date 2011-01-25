@@ -46,7 +46,7 @@
 	}
 
 	
-	public function callsEventNotification(eventSource:String, callEvent:String, callState:String, info:String, callDtmf:String, treatmentdId:String, noOfCalls:String, callId:String, confId:String, callInfo:String):*
+	public function callsEventNotification(eventSource:*, callEvent:*, callState:*, info:*, callDtmf:*, treatmentdId:*, noOfCalls:*, callId:*, confId:*, callInfo:*):*
 	{
 		ExternalInterface.call("callsEventNotification", eventSource, callEvent, callState, info, callDtmf, treatmentdId, noOfCalls, callId, confId, callInfo);
 	}

@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -130,11 +130,11 @@ public class ConferenceMember implements TreatmentDoneListener,
 	    if (++applyCount == 500 && Logger.logLevel >= Logger.LOG_INFO) {
 		double elapsed = (now - startTime) / 1000000000.;
 
-		Logger.println("elapsed " + elapsed + " seconds, applied " 
-		    + ConferenceMember.pmCount 
-		    + " pm's in " + secondsToApply + " seconds, avg per pm " 
+		Logger.println("elapsed " + elapsed + " seconds, applied "
+		    + ConferenceMember.pmCount
+		    + " pm's in " + secondsToApply + " seconds, avg per pm "
 		    + (secondsToApply / pmCount)
-		    + ", avg time to apply pm's " 
+		    + ", avg time to apply pm's "
 		    + (secondsToApply / applyCount)
 		    + " seconds, replaced " + replaced);
 
@@ -206,7 +206,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
 	whisperGroups = wgManager.getWhisperGroups();
 
-        mixManager = new MixManager(this, 
+        mixManager = new MixManager(this,
 	    conferenceManager.getMediaInfo().getSamplesPerPacket(),
 	    conferenceManager.getMediaInfo().getChannels());
 
@@ -242,7 +242,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	 * otherwise when we try to find another socket, we may get the same
 	 * one as before.
 	 *
-	 * So we make a list of the bad sockets and close them all 
+	 * So we make a list of the bad sockets and close them all
 	 * after we're done.
 	 */
 	ArrayList badChannels = new ArrayList();
@@ -254,7 +254,7 @@ public class ConferenceMember implements TreatmentDoneListener,
         	datagramChannel = DatagramChannel.open();
 
 		if (Logger.logLevel >= Logger.LOG_DETAIL) {
-		    Logger.println("Call " + cp 
+		    Logger.println("Call " + cp
 		        + " Opened datagram channel " + datagramChannel);
 		}
 
@@ -268,7 +268,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
 		InetSocketAddress bridgeAddress = Bridge.getLocalBridgeAddress();
 
-	        InetSocketAddress isa = 
+	        InetSocketAddress isa =
 		    new InetSocketAddress(bridgeAddress.getAddress(), nextRtpPort);
 
 		if (nextRtpPort > 0) {
@@ -295,8 +295,8 @@ public class ConferenceMember implements TreatmentDoneListener,
 			 * Port is odd, can't use this datagramSocket
 			 */
 			if (Logger.logLevel >= Logger.LOG_INFO) {
-			    Logger.println("Call " + cp 
-			        + " skipping DatagramSocket with odd port " 
+			    Logger.println("Call " + cp
+			        + " skipping DatagramSocket with odd port "
 			        + localPort);
 			}
 
@@ -304,7 +304,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		        continue;
 		    }
 
-		    Logger.writeFile("Call " + cp + " RTCP Port " 
+		    Logger.writeFile("Call " + cp + " RTCP Port "
 			+ (localPort + 1));
 
         	    rtcpReceiver = new RtcpReceiver(
@@ -315,7 +315,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		     * Couldn't bind, can't use this DatagramSocket.
 		     */
 		    if (Logger.logLevel >= Logger.LOG_INFO) {
-		        Logger.println("Call " + cp 
+		        Logger.println("Call " + cp
 			    + " skipping DatagramSocket " + e.getMessage());
 		    }
 		    badChannels.add(datagramChannel);
@@ -399,7 +399,7 @@ public class ConferenceMember implements TreatmentDoneListener,
  	s += memberReceiver.getMemberState();
 
  	s += memberSender.getMemberState();
-	
+
 	s += "\tMediaInfo " + memberReceiver.getMediaInfo() + "\n";
 
 	s += wgManager.getWhisperGroups(this);
@@ -445,104 +445,110 @@ public class ConferenceMember implements TreatmentDoneListener,
      * we now know the port at which the member (CallParticipant)
      * listens for data.
      */
-    public void initialize(CallHandler callHandler, 
-	    InetSocketAddress memberAddress, byte mediaPayload,
-	    byte receivePayload, byte telephoneEventPayload,
-	    InetSocketAddress rtcpAddress) {
+    public void initialize(CallHandler callHandler,    InetSocketAddress memberAddress, byte mediaPayload,
+	    byte receivePayload, byte telephoneEventPayload,    InetSocketAddress rtcpAddress)
+	{
 
         this.callHandler = callHandler;
 
-	if (rtcpAddress != null) {
-	    this.rtcpAddress = rtcpAddress;
-	} else {
-	    rtcpAddress = new InetSocketAddress(memberAddress.getAddress(),
-		memberAddress.getPort());
-	}
+		if (cp.getProtocol() != null && "RTMP".equals(cp.getProtocol()) == false)
+		{
+			if (rtcpAddress != null) {
+				this.rtcpAddress = rtcpAddress;
+			} else {
+				rtcpAddress = new InetSocketAddress(memberAddress.getAddress(),
+				memberAddress.getPort());
+			}
 
-	Logger.writeFile("Call " + cp 
-	    + " Initializing sender with member address " + memberAddress);
+			Logger.writeFile("Call " + cp  + " Initializing sender with member address " + memberAddress);
 
-	memberSender.initialize(conferenceManager, callHandler, memberAddress, 
-	    mediaPayload, telephoneEventPayload);
+			memberSender.initialize(conferenceManager, callHandler, memberAddress,  mediaPayload, telephoneEventPayload);
+			memberReceiver.initialize(conferenceManager, callHandler,  receivePayload, telephoneEventPayload, rtcpReceiver);
 
-	memberReceiver.initialize(conferenceManager, callHandler, 
-	    receivePayload, telephoneEventPayload, rtcpReceiver);
+			if (mediaPayload != receivePayload) {
+				Logger.println("Call " + cp
+					+ " send payload " + mediaPayload
+						+ " receive payload " + receivePayload);
+			}
 
-	if (mediaPayload != receivePayload) {
-	    Logger.println("Call " + cp
-	        + " send payload " + mediaPayload
-                + " receive payload " + receivePayload);
-	}
+			try {
+				myMediaInfo = SdpManager.findMediaInfo(receivePayload);
 
-	try {
-	    myMediaInfo = SdpManager.findMediaInfo(receivePayload);
+				if (Logger.logLevel >= Logger.LOG_INFO) {
+					Logger.println("Call " + cp + " media info " + myMediaInfo
+					+ " telephoneEventPayload " + telephoneEventPayload);
+				}
+			} catch (ParseException e) {
+				Logger.println("Call " + cp + " Invalid receivePayload "
+				+ receivePayload);
 
-	    if (Logger.logLevel >= Logger.LOG_INFO) {
-	        Logger.println("Call " + cp + " media info " + myMediaInfo 
-		    + " telephoneEventPayload " + telephoneEventPayload);
- 	    }
-	} catch (ParseException e) {
-	    Logger.println("Call " + cp + " Invalid receivePayload " 
-		+ receivePayload);
+				callHandler.cancelRequest("Invalid receive payload "
+				+ receivePayload);
+				return;
+			}
 
-	    callHandler.cancelRequest("Invalid receive payload " 
-		+ receivePayload);
-	    return;
-	}
+		} else {
 
-	MixManager oldMixManager = mixManager;
+			Logger.writeFile("Call " + cp  + " Initializing " + cp.getPhoneNumber());
 
-        mixManager = new MixManager(this, 
-	    conferenceManager.getMediaInfo().getSamplesPerPacket(),
-	    conferenceManager.getMediaInfo().getChannels());
-
-	synchronized (mixManager) {
-            mixManager.addMix(memberReceiver, -1.0D); // subtract self (mix-minus)
-
-	    /*
-	     * Restore private mixes which were set before we were initialized
-	     */
-	    synchronized (oldMixManager) {
-                ArrayList mixDescriptors = oldMixManager.getMixDescriptors();
-
-                for (int i = 0; i < mixDescriptors.size(); i++) {
-                    MixDescriptor md = (MixDescriptor) mixDescriptors.get(i);
-
-                    if (md.isPrivateMix()) {
-		        Logger.println("Call " + cp 
-			    + " restoring private mix: " + md);
-
-                        mixManager.addMix(md);
-		    }
-                }
-            }
-	}
-
-	conferenceWhisperGroup = wgManager.getConferenceWhisperGroup();
-
-	if (initializationDone) {
-            addCall(conferenceWhisperGroup);
-            setWhispering(conferenceWhisperGroup);
-
-	    Logger.println("Call " + cp 
-		+ " Whispering in conference whisper group");
-	    return;
-	} 
-
-	synchronized (conferenceManager) {
-	    String whisperGroupId = null;
-
-	    if ((whisperGroupId = cp.getWhisperGroupId()) != null) {
-		try {
-		    addCall(whisperGroupId);
-		    setWhispering(whisperGroupId);
-                } catch (ParseException e) {
-		    callHandler.cancelRequest("Invalid whisper group " 
-		        + whisperGroupId + " " + e.getMessage());
-                    return;
+			memberSender.initialize(conferenceManager, callHandler, memberAddress,  mediaPayload, telephoneEventPayload);
+			memberReceiver.initialize(conferenceManager, callHandler,  receivePayload, telephoneEventPayload, rtcpReceiver);
 		}
-	    }
-	}
+
+
+		MixManager oldMixManager = mixManager;
+
+			mixManager = new MixManager(this,
+			conferenceManager.getMediaInfo().getSamplesPerPacket(),
+			conferenceManager.getMediaInfo().getChannels());
+
+		synchronized (mixManager) {
+				mixManager.addMix(memberReceiver, -1.0D); // subtract self (mix-minus)
+
+			/*
+			 * Restore private mixes which were set before we were initialized
+			 */
+			synchronized (oldMixManager) {
+					ArrayList mixDescriptors = oldMixManager.getMixDescriptors();
+
+					for (int i = 0; i < mixDescriptors.size(); i++) {
+						MixDescriptor md = (MixDescriptor) mixDescriptors.get(i);
+
+						if (md.isPrivateMix()) {
+					Logger.println("Call " + cp
+					+ " restoring private mix: " + md);
+
+							mixManager.addMix(md);
+				}
+					}
+				}
+		}
+
+		conferenceWhisperGroup = wgManager.getConferenceWhisperGroup();
+
+		if (initializationDone) {
+				addCall(conferenceWhisperGroup);
+				setWhispering(conferenceWhisperGroup);
+
+			Logger.println("Call " + cp
+			+ " Whispering in conference whisper group");
+			return;
+		}
+
+		synchronized (conferenceManager) {
+			String whisperGroupId = null;
+
+			if ((whisperGroupId = cp.getWhisperGroupId()) != null) {
+			try {
+				addCall(whisperGroupId);
+				setWhispering(whisperGroupId);
+					} catch (ParseException e) {
+				callHandler.cancelRequest("Invalid whisper group "
+					+ whisperGroupId + " " + e.getMessage());
+						return;
+			}
+			}
+		}
 
         if (cp.getJoinConfirmationTimeout() == 0) {
             addCall(conferenceWhisperGroup);
@@ -553,28 +559,28 @@ public class ConferenceMember implements TreatmentDoneListener,
         }
 
         if (whisperGroup == null) {
-	    try {
-	        addCall("initial-" + cp);
-	        setWhispering("initial-" + cp);
-		initialWhisperGroup = 
-		    wgManager.findWhisperGroup("initial-" + cp);
-	    } catch (ParseException e) {
-                callHandler.cancelRequest("Call " + cp
-		    + " Can't add call to initial whisper group " 
-		    + e.getMessage());
-                return;
-            }
-	}
+			try {
+				addCall("initial-" + cp);
+				setWhispering("initial-" + cp);
+			initialWhisperGroup =
+				wgManager.findWhisperGroup("initial-" + cp);
+			} catch (ParseException e) {
+					callHandler.cancelRequest("Call " + cp
+				+ " Can't add call to initial whisper group "
+				+ e.getMessage());
+					return;
+			}
+		}
 
-	initializationDone = true;
+		initializationDone = true;
 
-	if (Logger.logLevel >= Logger.LOG_INFO) {
-	    Logger.println("Call " + cp 
-	        + " ConferenceMember initialization done...");
-	}
+		if (Logger.logLevel >= Logger.LOG_INFO) {
+			Logger.println("Call " + cp
+				+ " ConferenceMember initialization done...");
+		}
 
-	conferenceManager.joinDistributedConference(this);
-	joinedDistributedConference = true;
+		conferenceManager.joinDistributedConference(this);
+		joinedDistributedConference = true;
     }
 
     public void reinitialize(ConferenceManager conferenceManager) {
@@ -587,7 +593,7 @@ public class ConferenceMember implements TreatmentDoneListener,
                  */
                 synchronized (whisperGroups) {
                     for (int i = 0; i < whisperGroups.size(); i++) {
-                        WhisperGroup whisperGroup = (WhisperGroup) 
+                        WhisperGroup whisperGroup = (WhisperGroup)
 			    whisperGroups.get(i);
 
                         removeCall(whisperGroup.getId());
@@ -609,9 +615,9 @@ public class ConferenceMember implements TreatmentDoneListener,
 	         * When the call is transferred to the actual conference,
 	         * the conference parameters may be different.
 	         */
-                initialize(callHandler, memberSender.getSendAddress(), 
-	            memberSender.getMediaInfo().getPayload(), 
-	            memberReceiver.getMediaInfo().getPayload(), 
+                initialize(callHandler, memberSender.getSendAddress(),
+	            memberSender.getMediaInfo().getPayload(),
+	            memberReceiver.getMediaInfo().getPayload(),
 		    (byte) memberReceiver.getTelephoneEventPayload(), rtcpAddress);
 	    }
 	}
@@ -648,12 +654,12 @@ public class ConferenceMember implements TreatmentDoneListener,
 
     /*
      * Maintain list of MixDescriptors.
-     * 
+     *
      * Notes:
      *
      * - A member m is always whispering in one and only one whisper group.
      * - A descriptor is attenatuated based on where m is whispering
-     * - m has full volume for members in the whisper group in 
+     * - m has full volume for members in the whisper group in
      *   which m is whispering.
      * - if m is whispering in wg and wg has attenuation 0, then
      *   all other wg's are attenuated to 0 for m.
@@ -667,7 +673,7 @@ public class ConferenceMember implements TreatmentDoneListener,
      *		  volume 1.
      *	     - otherwise, ev is pm volume * wg attenuation
      * - pm descriptors for member m and all other members with pm's for m
-     *   must be adjusted when a member m starts or stops talking or 
+     *   must be adjusted when a member m starts or stops talking or
      *   when AWAY/RETURN changes.
      *
      * Events:
@@ -718,10 +724,10 @@ public class ConferenceMember implements TreatmentDoneListener,
      *		 will not be generating any voice data.
      *
      * Member m has a private mix for m1.
-     *		 A MixDescriptor for m is added describing the desired 
-     *		 volume for m1.  If m is not a member of the whisper group 
+     *		 A MixDescriptor for m is added describing the desired
+     *		 volume for m1.  If m is not a member of the whisper group
      * 		 in which m1 is whispering, ev is 0.
-     *           If m is not talking in wg, ev must be adjusted by 
+     *           If m is not talking in wg, ev must be adjusted by
      *	         wg attentuation.
      */
     private void adjustPrivateMixDescriptors() {
@@ -755,14 +761,14 @@ public class ConferenceMember implements TreatmentDoneListener,
 		        /*
 		         * Adjust private mixes member has for this call.
 		         */
-		        adjustPrivateMixDescriptor(member, this);    
+		        adjustPrivateMixDescriptor(member, this);
 		    }
 	        }
 	    }
 	}
-    }	
+    }
 
-    private void adjustPrivateMixDescriptor(ConferenceMember m1, 
+    private void adjustPrivateMixDescriptor(ConferenceMember m1,
 	    ConferenceMember m2) {
 
 	MixManager mixManager = m1.getMixManager();
@@ -770,7 +776,7 @@ public class ConferenceMember implements TreatmentDoneListener,
         synchronized (mixManager) {
             ArrayList mixDescriptors = mixManager.getMixDescriptors();
 
-	    MixDescriptor md = 
+	    MixDescriptor md =
 	        mixManager.findMixDescriptor(m2.getMemberReceiver());
 
 	    if (md == null) {
@@ -782,16 +788,16 @@ public class ConferenceMember implements TreatmentDoneListener,
 	        }
 	        return;
 	    }
-	
+
 	    adjustPrivateMixDescriptor(m1, m2, md);
 	}
-    }	
+    }
 
     /*
      * m1 has a private mix for m2.  Adjust the mix descriptor attenuation
      * and muting.
      */
-    private void adjustPrivateMixDescriptor(ConferenceMember m1, 
+    private void adjustPrivateMixDescriptor(ConferenceMember m1,
 	    ConferenceMember m2, MixDescriptor md) {
 
 	if (m1.getWhisperGroup() == null) {
@@ -810,7 +816,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		m2.getWhisperGroup().isMember(m1) == false) {
 
 	    if (Logger.logLevel >= Logger.LOG_MOREINFO) {
-	        Logger.println("Call " + m1 + " not member of " 
+	        Logger.println("Call " + m1 + " not member of "
 		    + m2.getWhisperGroup() + ", ev is 0");
 	    }
 
@@ -844,7 +850,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	mixManager.setAttenuation(md, attenuation);
 
 	/*
-	 * Since both members belong to the same whisper group, 
+	 * Since both members belong to the same whisper group,
 	 * the attenuated value needs to be subtracted from the private mix
 	 * because the member's data is already in the mix by that amount.
 	 */
@@ -867,7 +873,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		if (memberReceiver.getWhisperGroup() ==
 			conferenceWhisperGroup) {
 
-		    Logger.println("Call " + cp 
+		    Logger.println("Call " + cp
 			+ " mute pm for member in main conf");
 
 		    mixManager.setMuted(md, true);
@@ -954,7 +960,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	public ConferenceMember member;
 	public double[] spatialValues;
 
-	public PrivateMix(ConferenceMember memberWithMix, 
+	public PrivateMix(ConferenceMember memberWithMix,
 		ConferenceMember member, double[] spatialValues) {
 
 	    this.memberWithMix = memberWithMix;
@@ -977,13 +983,13 @@ public class ConferenceMember implements TreatmentDoneListener,
                 Set<ConferenceMember> memberSet = mixesToApply.keySet();
 
 		if (Logger.logLevel >= Logger.LOG_INFO) {
-	            Logger.println("Applying " + memberSet.size() 
+	            Logger.println("Applying " + memberSet.size()
 			+ " private mixes for " + memberWithMix);
 		}
 
 		for (ConferenceMember member : memberSet) {
                     double[] spatialValues = (double[]) mixesToApply.get(member);
-		
+
 		    mixes.add(new PrivateMix(memberWithMix, member, spatialValues));
 
 		    pmCount++;
@@ -1044,7 +1050,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		    return;
 	        }
 
-	        if (getCallHandler() == null || 
+	        if (getCallHandler() == null ||
 			getCallHandler().isCallEstablished() == false) {
 
 	            if (Logger.logLevel >= Logger.LOG_MOREINFO) {
@@ -1062,20 +1068,20 @@ public class ConferenceMember implements TreatmentDoneListener,
 		    return;
 	        }
 
-	        md = mixManager.setPrivateMix(member.getMemberReceiver(), 
+	        md = mixManager.setPrivateMix(member.getMemberReceiver(),
 		    spatialValues);
 
 		if (Logger.logLevel >= Logger.LOG_INFO) {
-		    Logger.println("Call " + this + " private mix for " 
+		    Logger.println("Call " + this + " private mix for "
 			+ member + " " + md);
 		}
 
 		if (md == null) {
 		    if (Logger.logLevel >= Logger.LOG_INFO) {
-			Logger.println(this + " pm already set for " 
+			Logger.println(this + " pm already set for "
 			    + member + " vol " + spatialValues[3]);
 		    }
-		    return;	
+		    return;
 		}
 
 	        /*
@@ -1124,14 +1130,14 @@ public class ConferenceMember implements TreatmentDoneListener,
     }
 
 
-    static HashMap<String, ArrayList> memberDoneListeners = 
+    static HashMap<String, ArrayList> memberDoneListeners =
 	new HashMap<String, ArrayList>();
 
     public void addMemberDoneListener(ConferenceMember member) {
 	synchronized (memberDoneListeners) {
 	    String conferenceId = member.getConferenceManager().getId();
 
-	    ArrayList<ConferenceMember> memberList = 
+	    ArrayList<ConferenceMember> memberList =
 		memberDoneListeners.get(conferenceId);
 
 	    if (memberList == null) {
@@ -1161,7 +1167,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	    new ArrayList<ConferenceMember>();
 
 	synchronized (memberDoneListeners) {
-	    ArrayList<ConferenceMember> memberList = 
+	    ArrayList<ConferenceMember> memberList =
 	        memberDoneListeners.get(conferenceId);
 
 	    if (memberList == null) {
@@ -1184,14 +1190,14 @@ public class ConferenceMember implements TreatmentDoneListener,
 	    }
 	}
 
-	for (ConferenceMember member : membersToNotify) { 
+	for (ConferenceMember member : membersToNotify) {
 	    member.memberDoneNotification(this);
 	}
     }
 
     public void memberDoneNotification(ConferenceMember member) {
 	if (Logger.logLevel >= Logger.LOG_INFO) {
-	    Logger.println("Call " + cp + " got memberDoneNotification for " 
+	    Logger.println("Call " + cp + " got memberDoneNotification for "
 		+ member);
 	}
 
@@ -1230,7 +1236,7 @@ public class ConferenceMember implements TreatmentDoneListener,
      */
     public void setConferenceMuted(boolean isConferenceMuted) {
         if (traceCall || Logger.logLevel >= Logger.LOG_INFO) {
-            Logger.println("Call " + cp + " muteConference is now " 
+            Logger.println("Call " + cp + " muteConference is now "
 		+ isConferenceMuted);
         }
 
@@ -1291,7 +1297,7 @@ public class ConferenceMember implements TreatmentDoneListener,
         done = true;
 
 	removeCallFromAllWhisperGroups();
-	
+
 	memberSender.end();
 	memberReceiver.end();
 
@@ -1314,7 +1320,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	        }
 	    }
 	}
-         
+
 	printStatistics();
     }
 
@@ -1323,7 +1329,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
 	/*
 	 * Make a list of private mixes this call has for others
-	 * Then remove the private mixes.  
+	 * Then remove the private mixes.
 	 * We can't remove as we go through the list because
 	 * we will be changing the list.
 	 */
@@ -1426,7 +1432,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	WhisperGroup whisperGroup = wgManager.findWhisperGroup(whisperGroupId);
 
 	if (whisperGroup == null) {
-	    throw new ParseException("No such whisper group:  " 
+	    throw new ParseException("No such whisper group:  "
 		+ whisperGroupId, 0);
 	}
 
@@ -1462,7 +1468,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	 * effectively making the volume zero for each other call.
 	 */
 	synchronized (conferenceManager) {
-	    ArrayList<ConferenceMember> memberList = 
+	    ArrayList<ConferenceMember> memberList =
 		conferenceManager.getMemberList();
 
 	    for (ConferenceMember member : memberList) {
@@ -1478,7 +1484,7 @@ public class ConferenceMember implements TreatmentDoneListener,
     public void addCall(String whisperGroupId) throws ParseException {
         synchronized (conferenceManager) {
 	    synchronized (whisperGroups) {
-	        WhisperGroup whisperGroup = 
+	        WhisperGroup whisperGroup =
 		    wgManager.findWhisperGroup(whisperGroupId);
 
 	        if (whisperGroup == null) {
@@ -1493,13 +1499,13 @@ public class ConferenceMember implements TreatmentDoneListener,
 			whisperGroup.setTransient(true);
 			whisperGroup.setLocked(true);
                     } catch (ParseException e) {
-                        Logger.println("Can't create whisper group " 
+                        Logger.println("Can't create whisper group "
 			    + whisperGroupId + " " + e.getMessage());
 
                         throw new ParseException("Can't create whisper group "
                             + whisperGroupId + " " + e.getMessage(), 0);
 		    }
-		} 
+		}
 
 		addCall(whisperGroup);
 	    }
@@ -1513,7 +1519,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
 		double attenuation = whisperGroup.getAttenuation();
 
-		if (this.whisperGroup != null && 
+		if (this.whisperGroup != null &&
 		        this.whisperGroup.getAttenuation() == 0) {
 
 		    /*
@@ -1521,10 +1527,10 @@ public class ConferenceMember implements TreatmentDoneListener,
 		     * Descriptor must have 0 attenuation.
 		     */
 	    	    attenuation = 0;
-		} 
+		}
 
 		synchronized(mixManager) {
-		    if (whisperGroup.hasCommonMix() == true && 
+		    if (whisperGroup.hasCommonMix() == true &&
 			    (cp.getInputTreatment() == null ||
 			    cp.isRecorder() == true)) {
 
@@ -1537,7 +1543,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		if (whisperGroup.getAttenuation() == 0) {
 		    /*
 		     * If the call is in a whisper group with full attenuation
-		     * the call is immediately set to whispering so 
+		     * the call is immediately set to whispering so
 		     * it can't hear anything else.
 		     */
                     if (Logger.logLevel >= Logger.LOG_INFO) {
@@ -1584,11 +1590,11 @@ public class ConferenceMember implements TreatmentDoneListener,
          */
         synchronized (conferenceManager) {
 	    synchronized (whisperGroups) {
-	        WhisperGroup whisperGroup = 
+	        WhisperGroup whisperGroup =
 		    wgManager.findWhisperGroup(whisperGroupId);
 
 	        if (whisperGroup == null) {
-		    Logger.println("Whisper group doesn't exist for " 
+		    Logger.println("Whisper group doesn't exist for "
 			+ whisperGroupId + "!");
 		    return;
 		}
@@ -1649,7 +1655,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
     private void copyOldPrivateMixes(ConferenceMember oldMember) {
 	/*
-	 * copy private mixes the oldMember has 
+	 * copy private mixes the oldMember has
 	 */
 	MixManager mixManager = oldMember.getMixManager();
 
@@ -1670,7 +1676,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 	        }
 
 	        if (Logger.logLevel >= Logger.LOG_INFO) {
-	            Logger.println("pre-migrate member " + oldMember 
+	            Logger.println("pre-migrate member " + oldMember
 		        + " has pm for " + mr);
 
 	            Logger.println("pre-migrate member " + oldMember
@@ -1682,7 +1688,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		}
 
 	        if (Logger.logLevel >= Logger.LOG_INFO) {
-	            Logger.println("Call " + cp + " Set private mix for " 
+	            Logger.println("Call " + cp + " Set private mix for "
 		        + mr + " to " + md);
 		}
 	    }
@@ -1716,18 +1722,18 @@ public class ConferenceMember implements TreatmentDoneListener,
     }
 
     /*
-     * Update private mixes of all other members 
+     * Update private mixes of all other members
      * who have a private mix for the oldMember.
      */
     private void updateOtherPrivateMixes(ConferenceMember oldMember) {
 	ArrayList privateMixesForMe = oldMember.getPrivateMixesForMe();
 
 	if (Logger.logLevel >= Logger.LOG_INFO) {
-	    Logger.println(oldMember + " private mixes for me " + 
+	    Logger.println(oldMember + " private mixes for me " +
 	        oldMember.getPrivateMixesForMe().size());
 	}
 
-	ConferenceMember[] pmArrayForMe = (ConferenceMember[]) 
+	ConferenceMember[] pmArrayForMe = (ConferenceMember[])
 	     privateMixesForMe.toArray(new ConferenceMember[0]);
 
 	for (int i = 0; i < pmArrayForMe.length; i++) {
@@ -1761,7 +1767,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		    }
 
                     if (Logger.logLevel >= Logger.LOG_INFO) {
-		        Logger.println("setting pm for " + m 
+		        Logger.println("setting pm for " + m
 			    + " to new member " + this.getMemberReceiver());
 		    }
 
@@ -1778,7 +1784,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		    }
 
                     if (Logger.logLevel >= Logger.LOG_INFO) {
-	                Logger.println("member with pm " + m 
+	                Logger.println("member with pm " + m
 			    + " descriptors after...");
 	                mixManager.showDescriptors();
 		    }
@@ -1804,16 +1810,16 @@ public class ConferenceMember implements TreatmentDoneListener,
 
 		if (whisperGroup.isMember(this) == false) {
 		    Logger.println("Call " + cp
-			+ " is not a member of whisper group " 
+			+ " is not a member of whisper group "
 			+ whisperGroupId);
 
 		    throw new ParseException("Call " + cp
-			+ " is not a member of whisper group " 
+			+ " is not a member of whisper group "
 			+ whisperGroupId, 0);
 		}
 
 		if (this.whisperGroup == whisperGroup) {
-		    Logger.println("Call " + cp + " already whispering in " 
+		    Logger.println("Call " + cp + " already whispering in "
 			+ whisperGroup);
 		    return;
 		}
@@ -1839,7 +1845,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		if (whisperGroup == null) {
 		    /*
 		     * This is the first time.  We're still initializing.
-		     */   
+		     */
 		    whisperGroup = newWhisperGroup;
 	            whisperGroup.setWhispering(true, this);
 		    memberReceiver.setWhisperGroup(whisperGroup);
@@ -1868,8 +1874,8 @@ public class ConferenceMember implements TreatmentDoneListener,
 		}
 
 		if (newWhisperGroup == whisperGroup) {
-	            Logger.writeFile("Call " + this 
-			+ " is already whispering to " + whisperGroup);	
+	            Logger.writeFile("Call " + this
+			+ " is already whispering to " + whisperGroup);
 		    return;
 		}
 
@@ -1924,12 +1930,12 @@ public class ConferenceMember implements TreatmentDoneListener,
 	        ArrayList mixDescriptors = mixManager.getMixDescriptors();
 
             	/*
-             	 * Attenuate whisperGroups 
+             	 * Attenuate whisperGroups
              	 */
                 for (int i = 0; i < mixDescriptors.size(); i++) {
                     MixDescriptor md = (MixDescriptor) mixDescriptors.get(i);
 
-		    if (md.getMixDataSource() instanceof WhisperGroup == 
+		    if (md.getMixDataSource() instanceof WhisperGroup ==
 			    false) {
 
 		        continue;
@@ -2021,7 +2027,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 
     public void saveCurrentContribution() {
 	memberReceiver.saveCurrentContribution();
-	
+
 	synchronized (memberTreatments) {
             if (currentTreatment == null) {
 		return;
@@ -2052,6 +2058,7 @@ public class ConferenceMember implements TreatmentDoneListener,
     }
 
     public boolean sendData() {
+
 	if (cp.getInputTreatment() != null && cp.getToRecordingFile() == null) {
 	    /*
 	     * We don't send data to a call playing an input treatment
@@ -2141,7 +2148,7 @@ public class ConferenceMember implements TreatmentDoneListener,
 		    Logger.println(
 			"treatments left " + memberTreatments.size());
 		}
-		
+
 		CallEvent callEvent = new CallEvent(CallEvent.TREATMENT_DONE);
 		callEvent.setTreatmentId(treatmentManager.getId());
 		callHandler.sendCallEventNotification(callEvent);

@@ -4,8 +4,10 @@
 	<publicHost>192.168.1.70</publicHost>	
 	
 	<conferences exten='3000'>
-		<conference id='2222' pin='2222' />
-		<conference id='1111' pin='1111' />		
+		<conference id='1111' pin='' />		
+		<conference id='2222' pin='2222' />	
+		<conference id='3333' exten='3333' pin='' />			
+		<conference id='4444' exten='4444' pin='4444' />			
 	</conferences>
 	
 </config>

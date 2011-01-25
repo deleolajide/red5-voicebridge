@@ -185,6 +185,8 @@ public class OutgoingCallHandler extends CallHandler
             csa = new SipTPCCallAgent(this);
 	} else if (protocol.equalsIgnoreCase("NS")) {
 	    csa = new NSOutgoingCallAgent(this);
+	} else if (protocol.equalsIgnoreCase("RTMP")) {
+	    csa = new RTMPCallAgent(this);
 	} else {
 	    //csa = new H323TPCCallAgent(this);
 	    reasonCallEnded =
@@ -482,6 +484,17 @@ public class OutgoingCallHandler extends CallHandler
      * is stopped.
      */
     public boolean waitForCallToBeAnswered() {
+
+		String protocol = Bridge.getDefaultProtocol();
+
+		if (cp.getProtocol() != null) {
+			protocol = cp.getProtocol();
+		}
+
+		if (protocol.equalsIgnoreCase("RTMP")) {
+			return true;
+		}
+
         synchronized(waitCallAnswerLock) {
             if (done || reasonCallEnded != null) {
                 return false;
@@ -501,6 +514,11 @@ public class OutgoingCallHandler extends CallHandler
     }
 
     public boolean waitForCallToBeEstablished() {
+
+		if (cp.getProtocol().equalsIgnoreCase("RTMP")) {
+			return true;
+		}
+
         synchronized(waitCallEstablishedLock) {
             if (done || reasonCallEnded != null) {
                 return false;

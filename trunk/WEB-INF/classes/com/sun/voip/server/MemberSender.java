@@ -50,6 +50,7 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.text.ParseException;
+import org.red5.server.webapp.voicebridge.RtmpParticipant;
 
 /**
  * Send RTP data to this ConferenceMember,
@@ -58,27 +59,18 @@ public class MemberSender {
     private ConferenceManager conferenceManager;
     private CallHandler callHandler;
     private CallParticipant cp;		             // caller parameters
-
     private boolean traceCall = false;
-
     private byte telephoneEventPayload;
-
     private MediaInfo myMediaInfo;
     private MediaInfo conferenceMediaInfo;
-
     private double outputVolume = 1.0;
-
     private boolean mustSetMarkBit = true;           // true for first packet
-
     private String dtmfKeyToSend;
     private int dtmfSendSequence;
-
     private RtpSenderPacket senderPacket;
-
     private SpeexEncoder speexEncoder;
 
     private InetSocketAddress memberAddress;
-
     private boolean done = false;
 
     /*
@@ -87,22 +79,17 @@ public class MemberSender {
     private int packetsSent = 0;
     private double totalTimeToGetData;
     private int comfortPayloadsSent = 0;
-
     private Cipher encryptCipher;
-
     private String encryptionKey;
     private String encryptionAlgorithm;
-
     private int mySamplesPerPacket;
-
     private SampleRateConverter outSampleRateConverter;
-
     private int outSampleRate;
     private int outChannels;
-
     private DatagramChannel datagramChannel;
-
     private boolean initializationDone = false;
+    private RtmpParticipant rtmpParticipant;
+
 
     public MemberSender(CallParticipant cp, DatagramChannel datagramChannel)
 	    throws IOException {
@@ -145,6 +132,17 @@ public class MemberSender {
 	}
     }
 
+
+	public void setRtmpParticipant(RtmpParticipant rtmpParticipant)
+	{
+		this.rtmpParticipant = rtmpParticipant;
+	}
+
+	public RtmpParticipant getRtmpParticipant()
+	{
+		return rtmpParticipant;
+	}
+
     public InetSocketAddress getSendAddress() {
 	return memberAddress;
     }
@@ -162,9 +160,9 @@ public class MemberSender {
 		+ sendAddress.getAddress() + " rejected!");
 	    return;
 	}
+*/
 
 	Logger.println("Call " + cp + " member address changed from " + memberAddress + " to " + sendAddress);
-*/
 	memberAddress = sendAddress;
     }
 
@@ -208,62 +206,70 @@ public class MemberSender {
 	this.conferenceManager = conferenceManager;
 	this.memberAddress = memberAddress;
 	this.telephoneEventPayload = telephoneEventPayload;
+    this.callHandler = callHandler;
 
-	try {
-	    myMediaInfo = SdpManager.findMediaInfo(mediaPayload);
-	} catch (ParseException e) {
-	    Logger.println("Call " + cp + " Invalid mediaPayload "
-		+ mediaPayload);
-
-	    callHandler.cancelRequest("Invalid mediaPayload " + mediaPayload);
-	    return;
-	}
-
-	int inSampleRate = myMediaInfo.getSampleRate();
-	int inChannels = myMediaInfo.getChannels();
+	Logger.writeFile("Call " + cp + " MemberSender initialization started ..." + cp.getProtocol());
 
 	conferenceMediaInfo = conferenceManager.getMediaInfo();
 
 	outSampleRate = conferenceMediaInfo.getSampleRate();
 	outChannels = conferenceMediaInfo.getChannels();
 
-	/*
-	 * No data is ever sent to an input treatment unless it's a recorder
-	 */
-	if (cp.getInputTreatment() == null || cp.isRecorder() == true) {
-	    if (inSampleRate != outSampleRate || inChannels != outChannels) {
-                Logger.println("Call " + cp
-                    + " resample data to send from " + inSampleRate + "/"
-                    + inChannels + " to " + outSampleRate
-                    + "/" + outChannels);
 
-	        try {
-	            outSampleRateConverter = new SampleRateConverter(
-		        this.toString(), outSampleRate, outChannels,
-		        inSampleRate, inChannels);
-	        } catch (IOException e) {
-	            callHandler.cancelRequest(e.getMessage());
-    		    return;
-	        }
-	    }
-	}
+	if (cp.getProtocol() != null && "RTMP".equals(cp.getProtocol()))
+	{
 
-	senderPacket = new RtpSenderPacket(myMediaInfo.getEncoding(),
-	    inSampleRate, inChannels);
+	} else {
 
-        this.callHandler = callHandler;
+		try {
+			myMediaInfo = SdpManager.findMediaInfo(mediaPayload);
+		} catch (ParseException e) {
+			Logger.println("Call " + cp + " Invalid mediaPayload "
+			+ mediaPayload);
 
-	if (myMediaInfo.getEncoding() == RtpPacket.SPEEX_ENCODING) {
-	    try {
-        	speexEncoder = new SpeexEncoder(inSampleRate, inChannels);
-		Logger.println("Call " + cp + " created SpeexEncoder");
-	    } catch (SpeexException e) {
-		Logger.println("Call " + cp
-		    + " Speex initialization for encoding failed:  "
-		    + e.getMessage());
-		callHandler.cancelRequest(e.getMessage());
-                return;
-            }
+			callHandler.cancelRequest("Invalid mediaPayload " + mediaPayload);
+			return;
+		}
+
+		int inSampleRate = myMediaInfo.getSampleRate();
+		int inChannels = myMediaInfo.getChannels();
+
+		/*
+		 * No data is ever sent to an input treatment unless it's a recorder
+		 */
+		if (cp.getInputTreatment() == null || cp.isRecorder() == true) {
+			if (inSampleRate != outSampleRate || inChannels != outChannels) {
+					Logger.println("Call " + cp
+						+ " resample data to send from " + inSampleRate + "/"
+						+ inChannels + " to " + outSampleRate
+						+ "/" + outChannels);
+
+				try {
+					outSampleRateConverter = new SampleRateConverter(
+					this.toString(), outSampleRate, outChannels,
+					inSampleRate, inChannels);
+				} catch (IOException e) {
+					callHandler.cancelRequest(e.getMessage());
+					return;
+				}
+			}
+		}
+
+		senderPacket = new RtpSenderPacket(myMediaInfo.getEncoding(),
+			inSampleRate, inChannels);
+
+		if (myMediaInfo.getEncoding() == RtpPacket.SPEEX_ENCODING) {
+			try {
+				speexEncoder = new SpeexEncoder(inSampleRate, inChannels);
+			Logger.println("Call " + cp + " created SpeexEncoder");
+			} catch (SpeexException e) {
+			Logger.println("Call " + cp
+				+ " Speex initialization for encoding failed:  "
+				+ e.getMessage());
+			callHandler.cancelRequest(e.getMessage());
+					return;
+				}
+		}
 	}
 
 	initializationDone = true;
@@ -285,7 +291,32 @@ public class MemberSender {
 
     private long timePreviousPacketSent;
 
-    public synchronized boolean sendData(int[] dataToSend) {
+
+    public synchronized boolean sendData(int[] dataToSend)
+    {
+	if (getRtmpParticipant() != null)	// we got RTMP member
+	{
+		try {
+
+			if (dataToSend == null) {
+				return false;
+
+			} else {
+
+				if (outputVolume != 1.0) {
+					callHandler.getMember().adjustVolume(dataToSend, outputVolume);
+				}
+
+				getRtmpParticipant().pushAudio(dataToSend);
+				return true;
+			}
+
+		} catch (Exception e) {
+
+			return false;
+		}
+	}
+
 	if (dtmfKeyToSend != null) {
 	    if (telephoneEventPayload != 0) {
 	        sendDtmfKey();
@@ -299,6 +330,7 @@ public class MemberSender {
 		dtmfKeyToSend = null;
 	    }
 	}
+
 
 	long start = System.nanoTime();
 
