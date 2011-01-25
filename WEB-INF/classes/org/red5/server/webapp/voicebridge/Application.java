@@ -48,12 +48,15 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 		String logDir = appPath + File.separator + "log" + File.separator;
 		//String logDir = appPath + File.separator + ".." + File.separator + "logs" + File.separator;
 
+
 		Properties properties = new Properties();
 
 		System.setProperty("com.sun.voip.server.LOGLEVEL", "99");
-		System.setProperty("com.sun.voip.server.SIPProxy", "");
+		System.setProperty("com.sun.voip.server.FIRST_RTP_PORT", "3200");
+		System.setProperty("com.sun.voip.server.LAST_RTP_PORT", "3299");
+		//System.setProperty("com.sun.voip.server.SIPProxy", "");
 		System.setProperty("user.name", "1002");
-		//System.setProperty("com.sun.voip.server.VoIPGateways", "192.168.1.90;sip:1002@192.168.1.70");
+		//System.setProperty("com.sun.voip.server.VoIPGateways", "");
 		properties.setProperty("javax.sip.STACK_NAME", "JAIN SIP 1.1");
 		properties.setProperty("javax.sip.RETRANSMISSION_FILTER", "on");
 		properties.setProperty("gov.nist.javax.sip.TRACE_LEVEL", "99");
@@ -152,7 +155,10 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
     {
  		loginfo( "Red5VoiceBridge callEventNotification " + callEvent.toString());
 
-		notifyConferenceMonitors(callEvent);
+		if (conferenceMonitors.size() > 0)
+		{
+			notifyConferenceMonitors(callEvent);
+		}
 
 		IConnection conn = Red5.getConnectionLocal();
 		IServiceCapableConnection service = (IServiceCapableConnection) conn;
@@ -1528,6 +1534,40 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 
 			return;
 		}
+
+		if ("sendDtmfKey".equalsIgnoreCase(parameter))
+		{
+			try {
+				String callId = getString(value);
+
+				if (callId == null)
+				{
+					reportError("Call id is missing");
+					return;
+				}
+
+				try {
+					CallHandler callHandler = CallHandler.findCall(callId);
+
+					if (callHandler == null)
+					{
+						reportError("No such callId:  " + callId);
+						return;
+					}
+
+					String dtmfKey = getQualifierString(value);
+					callHandler.dtmfKeys(dtmfKey);
+
+				} catch (NoSuchElementException e) {
+					reportError("Invalid callId specified:  " + value);
+				}
+
+			} catch (Exception e) {
+				reportError(e.toString());
+			}
+
+			return;
+		}
 	}
 
 
@@ -1556,6 +1596,19 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 		if ("cancelCall".equalsIgnoreCase(parameter))
 		{
 			CallHandler.hangup(cp.getCallId(), "User requested call termination");
+			return;
+		}
+
+		if ("sendDtmfKey".equalsIgnoreCase(parameter))
+		{
+			try {
+				CallHandler callHandler = CallHandler.findCall(cp.getCallId());
+				callHandler.dtmfKeys(value);
+
+			} catch (NoSuchElementException e) {
+				reportError("Invalid callId specified:  " + value);
+			}
+
 			return;
 		}
 
@@ -1844,9 +1897,9 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 			cp.setPhoneNumberLocation(value);
 		}
 
-		if ("callestablishedtreatment".equalsIgnoreCase(parameter))
+		if ("protocol".equalsIgnoreCase(parameter))
 		{
-			if (value.equalsIgnoreCase("SIP") == false && value.equalsIgnoreCase("NS") == false)
+			if (value.equalsIgnoreCase("SIP") == false && value.equalsIgnoreCase("NS") == false && value.equalsIgnoreCase("RTMP") == false)
 			{
 				reportError("Invalid protocol:  " + value);
 				return;
@@ -1977,6 +2030,18 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 			} catch (Exception e) {
 				reportError("setSecondPartyTimeout " + value + " is not numeric" );
 			}
+			return;
+		}
+
+		if ("RtmpSendStream".equalsIgnoreCase(parameter))
+		{
+			cp.setRtmpSendStream(value);
+			return;
+		}
+
+		if ("RtmpRecieveStream".equalsIgnoreCase(parameter))
+		{
+			cp.setRtmpRecieveStream(value);
 			return;
 		}
 
@@ -2188,26 +2253,41 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 
 		if (cp.migrateCall() == false)
 		{
-	    	cp.setPhoneNumber(config.formatPhoneNumber(cp.getPhoneNumber(), cp.getPhoneNumberLocation()));
+			if (cp.getProtocol() == null || "SIP".equals(cp.getProtocol()))
+			{
+				cp.setPhoneNumber(config.formatPhoneNumber(cp.getPhoneNumber(), cp.getPhoneNumberLocation()));
 
-	    	if (cp.getPhoneNumber() == null)
-	    	{
-				if (cp.getInputTreatment() == null)
+				if (cp.getPhoneNumber() == null)
 				{
-					reportError("You must specify a phone number or a soft phone URI");
+					if (cp.getInputTreatment() == null)
+					{
+						reportError("You must specify a phone number or a soft phone URI");
+						return false;
+
+					} else {
+
+						if (cp.getInputTreatment().equals("null"))
+						{
+							cp.setInputTreatment("");
+						}
+
+						cp.setPhoneNumber(cp.getInputTreatment());
+						cp.setProtocol("NS");
+					}
+				}
+
+			} else {
+
+				if (cp.getRtmpRecieveStream() == null || cp.getRtmpSendStream() == null)
+				{
+					reportError("You must specify send and recieve streams for RTMP protocol");
 					return false;
 
 				} else {
 
-		    		if (cp.getInputTreatment().equals("null"))
-		    		{
-						cp.setInputTreatment("");
-		    		}
-
-		    		cp.setPhoneNumber(cp.getInputTreatment());
-		    		cp.setProtocol("NS");
+					cp.setPhoneNumber("voicebridge@rtmp:/" + cp.getRtmpRecieveStream() + "/" + cp.getRtmpSendStream());
 				}
-	    	}
+			}
 		}
 
         if (cp.getName() == null || cp.getName().equals(""))

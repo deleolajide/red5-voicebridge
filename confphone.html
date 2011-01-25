@@ -1,0 +1,33 @@
+<html>
+<head>
+<title>Red5 VoiceBridge Phone</title>
+	<script type="text/javascript" src="swfobject.js"></script>
+	<script type="text/javascript">
+
+	var voiceBridge = null;
+
+	function setupApp()
+	{
+		voiceBridge = document.getElementById("voiceBridgeID");
+	}
+
+	function stopApp()
+	{
+		if (voiceBridge != null)
+		{
+			voiceBridge.windowCloseEvent();
+		}
+	}
+
+	</script>
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupApp()" onUnload="stopApp()">
+<div id="voiceBridgeDIV"></div>
+<script type="text/javascript">
+		fo = new SWFObject("confphone.swf", "voiceBridgeID", "100%", "100%", "9");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "voiceBridgeID");
+		fo.write("voiceBridgeDIV");
+</script>
+</body>
+</html>

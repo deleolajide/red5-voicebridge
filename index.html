@@ -25,6 +25,16 @@
 	{
 		if (voiceBridge != null)
 		{
+			if (document.getElementById("cpParam").value == "create")
+			{
+				uid = Math.random().toString(36).substr(2,9);
+			}
+
+			if (document.getElementById("cpParam").value == "RtmpSendStream")
+			{
+				voiceBridge.manageCallParticipant(uid, "Protocol", "RTMP");
+			}
+
 			voiceBridge.manageCallParticipant(uid, document.getElementById("cpParam").value, document.getElementById("cpValue").value);
 
 		}
@@ -97,9 +107,14 @@
 			<option value='create'>Create Call Participant</option>
 			<option value='destroy'>Destroy Call Participant</option>
 			<option value='phoneNumber'>Phone Number</option>
+			<option value='RtmpSendStream'>RTMP Send Stream</option>
+			<option value='RtmpRecieveStream'>RTMP Recieve Stream</option>
+			<option value='Protocol'>SIP or RTMP</option>
 			<option value='conferenceid'>Set Conference Id</option>
 			<option value='secondPartyNumber'>Second Party Number</option>
 			<option value='makeCall'>Make Call</option>
+			<option value='mute'>Mute Participant</option>
+			<option value='sendDtmfKey'>Send DTMF</option>
 			<option value='cancelCall'>Cancel Call</option>
 		</select>
 	</td>
@@ -116,6 +131,7 @@
 			<option value='getStatistics'>Get Statistics</option>
 			<option value='createConference'>Create Conference</option>
 			<option value='transferCall'>Transfer to another Conference</option>
+			<option value='sendDtmfKey'>Send DTMF Tone</option>
 		</select>
 	</td>
 	<td><input type='text' id='vbValue' size='30' value='true:IncomingCallsConference'></td>

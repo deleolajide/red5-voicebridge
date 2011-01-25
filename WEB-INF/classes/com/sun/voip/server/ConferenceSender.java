@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -96,7 +96,7 @@ public class ConferenceSender extends Thread {
 
     /**
      * The job of the conference sender is to send a voice data packet
-     * to each conference member every 20 ms.  
+     * to each conference member every 20 ms.
      */
     public void run() {
 	String tickerClassName = System.getProperty("com.sun.voip.TICKER");
@@ -109,7 +109,7 @@ public class ConferenceSender extends Thread {
 	    Logger.println(e.getMessage());
 	    end();
 	    return;
-        } 
+        }
 
 	/*
 	 * Pump out data every <timeBetweenPackets> ms to each member.
@@ -127,7 +127,7 @@ public class ConferenceSender extends Thread {
                     listener.senderCallback();
 		} catch (Exception e) {
 		    e.printStackTrace();
-		    Logger.println("Sender callback failed!  " 
+		    Logger.println("Sender callback failed!  "
 			+ e.getMessage());
 		}
             }
@@ -149,7 +149,7 @@ public class ConferenceSender extends Thread {
                 Logger.println(getName() + " tick() failed! " + e.getMessage());
 		end();
 		break;
-            }   
+            }
 
 	    if (ConferenceManager.getTotalMembers() == 0) {
 		resetStatistics();
@@ -166,9 +166,9 @@ public class ConferenceSender extends Thread {
 		lastMaxSendTime = maxSendTime / 1000000000.;
 
 	        String s = getName()
-	            + " time to send a packet to " + ConferenceManager.getTotalMembers() 
-	            + " members in last 5 seconds is " + (sendTime / 1000000000.) 
-		    + " seconds, average time " + averageSendTime + " seconds " 
+	            + " time to send a packet to " + ConferenceManager.getTotalMembers()
+	            + " members in last 5 seconds is " + (sendTime / 1000000000.)
+		    + " seconds, average time " + averageSendTime + " seconds "
 		    + ", maxSendTime " + lastMaxSendTime
 		    + ", members speaking " + CallHandler.getTotalSpeaking();
 
@@ -191,7 +191,7 @@ public class ConferenceSender extends Thread {
 
 	ticker.disarm();
     }
-   
+
     public static double getAverageSendTime() {
         return averageSendTime;
     }
@@ -211,8 +211,7 @@ public class ConferenceSender extends Thread {
 	ArrayList memberList = new ArrayList();
 
 	for (int i = 0; i < conferenceList.size(); i++) {
-	    ConferenceManager conferenceManager = (ConferenceManager) 
-		conferenceList.get(i);
+	    ConferenceManager conferenceManager = (ConferenceManager) conferenceList.get(i);
 
 	    //ArrayList ml = (ArrayList) conferenceManager.getMemberList();
 
@@ -224,7 +223,7 @@ public class ConferenceSender extends Thread {
 	    //for (int j = 0; j < ml.size(); j++) {
             //    ConferenceMember member = (ConferenceMember) ml.get(j);
 	    //	member.saveCurrentContribution();
-	    //} 
+	    //}
 
 	    /*
 	     * Take a snapshot of all members and all whisper groups
@@ -247,7 +246,7 @@ public class ConferenceSender extends Thread {
 		        ArrayList ml = whisperGroup.getMembers();
 
 		        for (int k = 0; k < ml.size(); k++) {
-			    ConferenceMember member = (ConferenceMember) 
+			    ConferenceMember member = (ConferenceMember)
 			        ml.get(k);
 
 			    if (member.getWhisperGroup() == whisperGroup) {
@@ -302,11 +301,11 @@ public class ConferenceSender extends Thread {
 
 	for (int i = 0; i < memberList.size(); i++) {
 	    ConferenceMember member = (ConferenceMember) memberList.get(i);
-		    
+
 	    member.invalidateCurrentContribution();
 	}
     }
- 
+
     private ArrayList workerThreads = new ArrayList();
 
     private ConcurrentLinkedQueue workToDo = new ConcurrentLinkedQueue();
@@ -318,7 +317,7 @@ public class ConferenceSender extends Thread {
 
 	        Logger.println("conf " + getName() + ": " + m);
 	    }
-	    Logger.println("wt size " + workerThreads.size() 
+	    Logger.println("wt size " + workerThreads.size()
 		+ " sender threads " + senderThreads);
 	}
 
@@ -362,7 +361,7 @@ public class ConferenceSender extends Thread {
 
 	for (int i = 0; i < memberList.size(); i++) {
 	    ConferenceMember member = (ConferenceMember) memberList.get(i);
-		    
+
 	    if (member.getMemberSender().memberIsReadyForSenderData()) {
 		workToDo.add(member);
 	    }
@@ -408,8 +407,8 @@ public class ConferenceSender extends Thread {
                 member.sendData();
 	    } catch (Exception e) {
 		e.printStackTrace();
-		
-		Logger.println("Can't send data to " + member + " " 
+
+		Logger.println("Can't send data to " + member + " "
 		    + e.getMessage());
 
 		member.getCallHandler().cancelRequest("Unexpected Exception");
@@ -445,18 +444,18 @@ public class ConferenceSender extends Thread {
 	    done = true;
 	    interrupt();
 	}
-		
+
         public void run() {
-	    while (!done) { 
+	    while (!done) {
 		try {
-	            ConferenceMember member = (ConferenceMember) 
+	            ConferenceMember member = (ConferenceMember)
 			workToDo.remove();
 
 		    try {
 	                member.sendData();
 	    	    } catch (Exception e) {
 			e.printStackTrace();
-		
+
 			Logger.println("Can't send data to " + member
 		             + " " + e.getMessage());
 
@@ -503,7 +502,7 @@ public class ConferenceSender extends Thread {
 
 	if (packetsSent > 0) {
 	    Logger.println(getName()
-		+ " average time to send a packet to every member " 
+		+ " average time to send a packet to every member "
 		+ (totalSendTime / 1000000000. / packetsSent) + " seconds ");
 	}
 

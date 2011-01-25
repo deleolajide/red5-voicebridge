@@ -74,12 +74,14 @@ public class IncomingConferenceHandler extends Thread
     private IncomingCallHandler incomingCallHandler;
 
     private String lastDtmfKey;
+    private String phoneNo;
 
     /**
      * Constructor.
      */
-    public IncomingConferenceHandler(IncomingCallHandler incomingCallHandler) {
+    public IncomingConferenceHandler(IncomingCallHandler incomingCallHandler, String phoneNo) {
 	this.incomingCallHandler = incomingCallHandler;
+	this.phoneNo = phoneNo;
 
 	incomingCallHandler.addCallEventListener(this);
     }
@@ -134,10 +136,33 @@ public class IncomingConferenceHandler extends Thread
 		    + callEvent.getInfo());
 	    }
 
-	    playTreatmentToCall(ENTER_MEETING_CODE);
+		if (Config.getInstance().getMeetingCode(phoneNo) != null)
+		{
+			meetingCode = Config.getInstance().getMeetingCode(phoneNo);
 
-	    state = WAITING_FOR_MEETING_CODE;
-	    start();
+			if (Config.getInstance().getPassCode(meetingCode, phoneNo) == null)
+			{
+				try {
+					incomingCallHandler.transferCall(Config.getInstance().getMeetingCode(phoneNo));
+					state = IN_MEETING;
+
+				} catch (IOException e) {
+					System.err.println("Exception joining meeting! " + meetingCode + " " + e.getMessage());
+				}
+
+			} else {
+				state = WAITING_FOR_PASS_CODE;
+				playTreatmentToCall(ENTER_REQUIRED_PASS_CODE);
+				start();
+			}
+
+		} else {
+
+	    	playTreatmentToCall(ENTER_MEETING_CODE);
+			state = WAITING_FOR_MEETING_CODE;
+			start();
+		}
+
 	    return;
 	}
 
@@ -194,9 +219,22 @@ public class IncomingConferenceHandler extends Thread
 
 		if (Config.getInstance().isValidConference(meetingCode))
 		{
-        	state = WAITING_FOR_PASS_CODE;
-        	playTreatmentToCall(ENTER_REQUIRED_PASS_CODE);
-        	return;
+
+			if (Config.getInstance().getPassCode(meetingCode, phoneNo) == null)
+			{
+				try {
+					incomingCallHandler.transferCall(meetingCode);
+					state = IN_MEETING;
+
+				} catch (IOException e) {
+					System.err.println("Exception joining meeting! " + meetingCode + " " + e.getMessage());
+				}
+
+			} else {
+        		state = WAITING_FOR_PASS_CODE;
+        		playTreatmentToCall(ENTER_REQUIRED_PASS_CODE);
+        		return;
+			}
 
 		} else {
 			playTreatmentToCall(INVALID_MEETING_CODE + ";" + ENTER_MEETING_CODE);

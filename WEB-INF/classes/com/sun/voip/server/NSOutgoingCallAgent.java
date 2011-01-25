@@ -69,8 +69,10 @@ public class NSOutgoingCallAgent extends CallSetupAgent {
 
 		TreatmentManager treatmentManager = null;
 
-		if (cp.getInputTreatment() != null) {
-			if (cp.getInputTreatment().length() > 0) {
+		if (cp.getInputTreatment() != null)
+		{
+			if (cp.getInputTreatment().length() > 0)
+			{
 				try {
 				/*
 				 * Just make sure we can open the file

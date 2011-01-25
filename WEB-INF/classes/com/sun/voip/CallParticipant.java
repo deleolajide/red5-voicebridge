@@ -45,7 +45,7 @@ public class CallParticipant {
     private String  displayName                    = null;
     private boolean distributedBridge		   = false;
     private boolean doNotRecord			   = false;
-    private boolean dtmfDetection        	   = false;
+    private boolean dtmfDetection        	   = true;
     private boolean dtmfSuppression		   = true;
     private String  encryptionKey		   = null;
     private String  encryptionAlgorithm		   = null;
@@ -79,7 +79,7 @@ public class CallParticipant {
     private boolean speexEncode			   = false;
     private String  whisperGroupId		   = null;
     private String  voipGateway			   = null;
-    private boolean voiceDetection       	   = true;
+    private boolean voiceDetection       	   = false;
     private boolean voiceDetectionWhileMuted       = false;
     private boolean handleSessionProgress	   = false;
     private String remoteMediaInfo		   = null;
@@ -94,6 +94,8 @@ public class CallParticipant {
     private int     secondPartyTimeout             = 0;
     private String  secondPartyTreatment           = null;
     private boolean secondPartyVoiceDetection      = false;
+    private String  rtmpSendStream				= null;
+    private String  rtmpRecieveStream				= null;
 
     /**
      * Constructor
@@ -107,6 +109,21 @@ public class CallParticipant {
     public int getCallAnswerTimeout() {
 	return callAnswerTimeout;
     }
+
+    /**
+     * Get RTMP send stream name
+     */
+    public String getRtmpSendStream() {
+        return rtmpSendStream;
+    }
+
+    /**
+     * Get RTMP recieve stream name
+     */
+    public String getRtmpRecieveStream() {
+        return rtmpRecieveStream;
+    }
+
 
     /**
      * Get audio treatment string for call answered
@@ -460,6 +477,20 @@ public class CallParticipant {
      */
     public boolean voiceDetectionWhileMuted() {
 	return voiceDetectionWhileMuted;
+    }
+
+    /**
+     * Set RTMP send stream name
+     */
+    public void setRtmpSendStream(String rtmpSendStream) {
+        this.rtmpSendStream = rtmpSendStream;
+    }
+
+    /**
+     * Set RTMP recieve stream name
+     */
+    public void setRtmpRecieveStream(String rtmpRecieveStream) {
+        this.rtmpRecieveStream = rtmpRecieveStream;
     }
 
     /**

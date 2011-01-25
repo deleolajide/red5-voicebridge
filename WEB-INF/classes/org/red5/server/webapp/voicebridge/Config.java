@@ -13,6 +13,8 @@ import org.w3c.dom.NodeList;
 public class Config {
 
 	private HashMap<String, Conference> conferences;
+	private HashMap<String, Conference> extensions;
+
 	private NodeList tagConfernces = null;
 	private static Config singletonConfig;
 	private String privateHost = "127.0.0.1";
@@ -29,9 +31,11 @@ public class Config {
 	private Config() {
 
 		conferences = new HashMap<String, Conference>();
+		extensions = new HashMap<String, Conference>();
+
 		String appPath = System.getProperty("user.dir");
-		String configFile = appPath + File.separator + "webapps" + File.separator + "voicebridge" + File.separator + "red5voicebridge.xml";
-		//String configFile = appPath + File.separator + ".." + File.separator + "plugins" + File.separator + "redfire" + File.separator + "conf" + File.separator + "red5voicebridge.xml";
+		String configFile = appPath + File.separator + "webapps" + File.separator + "voicebridge" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
+		//String configFile = appPath + File.separator + ".." + File.separator + "plugins" + File.separator + "redfire" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
 
 		try {
 			DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -64,6 +68,17 @@ public class Config {
 				Conference conference = new Conference();
 				conference.id = conf.getAttribute("id");
 				conference.pin = conf.getAttribute("pin");
+
+				if (conference.pin != null && conference.pin.length() == 0)
+					conference.pin = null;
+
+				conference.exten = conf.getAttribute("exten");
+
+				if (conference.exten != null && conference.exten.length() > 0)
+				{
+					extensions.put(conference.exten, conference);
+				}
+
 				conferences.put(conference.id, conference);
 
 				System.out.println(String.format("Red5VoiceBridge conference: %s with pin %s", conference.id, conference.pin));
@@ -92,23 +107,66 @@ public class Config {
 			return tagConfernces.getLength();
 	}
 
-	public Boolean isValidConference(String id)
+	public boolean isValidConference(String id)
 	{
 		return conferences.containsKey(id);
 	}
 
-	public Boolean isValidConferencePin(String id, String pin)
+	public boolean isValidConferencePin(String id, String pin)
 	{
-		Boolean valid = false;
+		boolean valid = false;
 
 		if (conferences.containsKey(id))
 		{
 			Conference conf = conferences.get(id);
-			valid = pin.equals(conf.pin);
+			valid = conf.pin == null || pin.equals(conf.pin);
 		}
 
 		return valid;
 	}
+
+    public Conference getConferenceByPhone(String phoneNo)
+    {
+		Conference conf = null;
+
+		if (extensions.containsKey(phoneNo))
+		{
+			conf = extensions.get(phoneNo);
+		}
+
+		return conf;
+    }
+
+    public String getMeetingCode(String phoneNo)
+    {
+		String id = null;
+
+		if (extensions.containsKey(phoneNo))
+		{
+			Conference conf = extensions.get(phoneNo);
+			id = conf.id;
+		}
+
+		return id;
+    }
+
+    public String getPassCode(String meetingId, String phoneNo)
+    {
+		String pin = null;
+
+		if (extensions.containsKey(phoneNo))
+		{
+			Conference conf = extensions.get(phoneNo);
+			pin = conf.pin;
+
+		} else if (conferences.containsKey(meetingId)) {
+
+			Conference conf = conferences.get(meetingId);
+			pin = conf.pin;
+		}
+
+		return pin;
+    }
 
 	public String getPrivateHost()
 	{
@@ -332,8 +390,9 @@ public class Config {
 
 	private class Conference
 	{
-		public String pin;
-		public String id;
+		public String pin = null;
+		public String id = null;
+		public String exten = null;
 
 	}
 }

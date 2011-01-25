@@ -1,0 +1,6 @@
+Buildfile: build.xml
+
+compile:
+
+BUILD SUCCESSFUL
+Total time: 0 seconds
