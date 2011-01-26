@@ -1,9 +1,9 @@
 Buildfile: build.xml
 
 compile:
-    [javac] Compiling 1 source file to C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes
+    [javac] Compiling 2 source files to C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes
     [javac] Note: C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\org\red5\server\webapp\voicebridge\RtmpParticipant.java uses unchecked or unsafe operations.
     [javac] Note: Recompile with -Xlint:unchecked for details.
 
 BUILD SUCCESSFUL
-Total time: 2 seconds
+Total time: 3 seconds

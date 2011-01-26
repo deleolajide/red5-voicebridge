@@ -264,7 +264,11 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
 
 				viewBufferSender.get(tempNellyBuffer);
 
+				// adjust volume
+				//normalize(tempNellyBuffer);
+
 				// Convert it into Nelly
+
 				CodecImpl.encode(senderEncoderMap, tempNellyBuffer, nellyBytes);
 
 				// Having done all of that, we now see if we need to send the audio or drop it.
@@ -343,13 +347,13 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
     }
 
 
-   	public float[] normalize(float[] audio, int length)
+   	public int[] normalize(int[] audio)
    	{
 	    // Scan for max peak value here
 	    float peak = 0;
-		for (int n = 0; n < length; n++)
+		for (int n = 0; n < audio.length; n++)
 		{
-			float val = Math.abs(audio[n]);
+			int val = Math.abs(audio[n]);
 			if (val > peak)
 			{
 				peak = val;
@@ -359,10 +363,10 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
 		// Peak is now the loudest point, calculate ratio
 		float r1 = 32768 / peak;
 
-		// Don't increase by over 500% to prevent loud background noise, and normalize to 98%
-		float ratio = Math.min(r1, 5) * .98f;
+		// Don't increase by over 500% to prevent loud background noise, and normalize to 75%
+		float ratio = Math.min(r1, 5) * .75f;
 
-		for (int n = 0; n < length; n++)
+		for (int n = 0; n < audio.length; n++)
 		{
 			audio[n] *= ratio;
 		}
@@ -511,6 +515,7 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
 			try {
 
 				if (memberReceiver != null ) {
+
 					memberReceiver.handleRTMPMedia(encodingBuffer, kt2);
 
 					if ( kt2 < 10 ) {
