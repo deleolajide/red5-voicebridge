@@ -3,6 +3,8 @@ package org.red5.server.webapp.voicebridge;
 import java.io.*;
 import java.util.*;
 
+import java.nio.IntBuffer;
+
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.IStreamableFile;
 import org.red5.io.ITag;
@@ -18,6 +20,9 @@ import org.red5.server.api.event.IEvent;
 import org.red5.server.api.event.IEventDispatcher;
 import org.red5.server.api.service.IPendingServiceCall;
 import org.red5.server.api.service.IPendingServiceCallback;
+import org.red5.server.api.IConnection;
+import org.red5.server.api.Red5;
+import org.red5.server.net.rtmp.RTMPMinaConnection;
 import org.red5.server.net.rtmp.Channel;
 import org.red5.server.net.rtmp.RTMPClient;
 import org.red5.server.net.rtmp.INetStreamEventHandler;
@@ -55,18 +60,29 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
     private int kt = 0;
     private short kt2 = 0;
     private IoBuffer buffer;
-	private long start = System.currentTimeMillis();
+
    	private float[] senderEncoderMap = new float[64];
    	private float[] recieverEncoderMap = new float[64];
-   	private float[] tempBuffer = new float[ 256 ];
-   	private int tempBufferOffset = 0;
 
-   	private boolean asao_buffer_processed = false;
-    private float[] tempSendBuffer  = new float[ 256 ];
-    private int[] encodingBuffer = new int[ 160 ];
-    private int encodingOffset = 0;
-    private int tempBufferRemaining = 0;
+    private static final int NELLYMOSER_CODEC_ID = 82;
+    private static final int L16_AUDIO_LENGTH = 256;
+    private static final int NELLY_AUDIO_LENGTH = 64;
+    private static final int ULAW_AUDIO_LENGTH = 160;
+    private static final int MAX_BUFFER_LENGTH = 1280;
 
+    private final IntBuffer l16AudioSender = IntBuffer.allocate(MAX_BUFFER_LENGTH);
+    private final IntBuffer l16AudioRecv = IntBuffer.allocate(MAX_BUFFER_LENGTH);
+
+    private IntBuffer viewBufferSender;
+    private IntBuffer viewBufferRecv;
+
+    private int[] tempNellyBuffer = new int[L16_AUDIO_LENGTH];
+    private final byte[] nellyBytes = new byte[NELLY_AUDIO_LENGTH];
+
+    private int[] tempL16Buffer = new int[L16_AUDIO_LENGTH];
+    private int[] l16Buffer = new int[ULAW_AUDIO_LENGTH];
+
+	private long startTime = System.currentTimeMillis();
 
     public RtmpParticipant(MemberReceiver memberReceiver)
     {
@@ -143,15 +159,12 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
 			audioTs = 0;
 			kt = 0;
 			kt2 = 0;
-			start = System.currentTimeMillis();
 
-			senderEncoderMap = new float[64];
 			recieverEncoderMap = new float[64];
-			tempBuffer = new float[ 256 ];
-			tempBufferOffset = 0;
+			senderEncoderMap = new float[64];
 
-            tempSendBuffer = new float[ 256 ];
-            encodingBuffer = new int[ 160 ];
+			viewBufferSender = l16AudioSender.asReadOnlyBuffer();
+			viewBufferRecv = l16AudioRecv.asReadOnlyBuffer();
 
 			try {
 				connect( host, port, app, this );
@@ -241,127 +254,63 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
         	System.out.println( "RtmpParticipant.pushAudio() - dataToSend -> length = " + pcmBuffer.length + ".");
 		}
 
+		try {
+			l16AudioSender.put(pcmBuffer);
 
-        int pcmBufferOffset = 0;
-        int copySize = 0;
-        boolean pcmBufferProcessed = false;
-
-        do {
-			if ( ( tempBuffer.length - tempBufferOffset ) <= ( pcmBuffer.length - pcmBufferOffset ) ) {
-
-				copySize = tempBuffer.length - tempBufferOffset;
-			}
-			else {
-
-				copySize = pcmBuffer.length - pcmBufferOffset;
-			}
-
-
-			bufferIndexedCopy(tempBuffer, tempBufferOffset, pcmBuffer, pcmBufferOffset, copySize );
-			tempBufferOffset += copySize;
-			pcmBufferOffset += copySize;
-
-			if ( tempBufferOffset == 256  )
+			if ((l16AudioSender.position() - viewBufferSender.position()) >= L16_AUDIO_LENGTH)
 			{
-				try {
-					byte[] encodedStream = new byte[ 64 ];
-					//tempBuffer = normalize(tempBuffer, 256);
-					CodecImpl.encode(senderEncoderMap, tempBuffer, encodedStream);
+				// We have enough L16 audio to generate a Nelly audio.
+				// Get some L16 audio
+
+				viewBufferSender.get(tempNellyBuffer);
+
+				// Convert it into Nelly
+				CodecImpl.encode(senderEncoderMap, tempNellyBuffer, nellyBytes);
+
+				// Having done all of that, we now see if we need to send the audio or drop it.
+				// We have to encode to build the encoderMap so that data from previous audio packet
+				// will be used for the next packet.
+
+				boolean sendPacket = true;
+				IConnection conn = Red5.getConnectionLocal();
+
+				if (conn instanceof RTMPMinaConnection) {
+					long pendingMessages = ((RTMPMinaConnection)conn).getPendingMessages();
+
+					if (pendingMessages > 25) {
+						// Message backed up probably due to slow connection to client (25 messages * 20ms ptime = 500ms audio)
+						sendPacket = false;
+						System.out.println(String.format("Dropping packet. Connection %s congested with %s pending messages (~500ms worth of audio) .", conn.getClient().getId(), pendingMessages));
+					}
+				}
+
+				if (sendPacket) {
 
 					if (kt == 0)
 					{
-						start = System.currentTimeMillis();
+						startTime = System.currentTimeMillis();
 						timeStamp = 0;
 
 					} else {
 
-						timeStamp = (int)(System.currentTimeMillis() - start);
+						timeStamp = (int)(System.currentTimeMillis() - startTime);
 					}
 
-					pushAudio(64, encodedStream, timeStamp, 82);
-
-				} catch (Exception e) {
-
-					loggererror( "RtmpParticipant pushAudio exception " + e );
-					e.printStackTrace();
+					pushAudio(NELLY_AUDIO_LENGTH, nellyBytes, timeStamp, NELLYMOSER_CODEC_ID);
 				}
-
-				tempBufferOffset = 0;
 			}
 
-			if ( pcmBufferOffset == pcmBuffer.length )
-			{
-				pcmBufferProcessed = true;
-			}
+		} catch (Exception e) {
 
-        } while ( !pcmBufferProcessed );
+            loggererror( "RtmpParticipant pushAudio exception " + e );
+		}
+
+        if (l16AudioSender.position() == l16AudioSender.capacity()) {
+        	// We've processed 8 Ulaw packets (5 Nelly packets), reset the buffers.
+        	l16AudioSender.clear();
+        	viewBufferSender.clear();
+        }
 	}
-
-    private int bufferIndexedCopy(int[] destBuffer, int startDestBuffer, float[] origBuffer, int startOrigBuffer, int copySize )
-    {
-        int destBufferIndex = startDestBuffer;
-        int origBufferIndex = startOrigBuffer;
-        int counter = 0;
-
-        if ( kt2 < 10 )
-        {
-			loggerdebug( "bufferIndexedCopy " +
-					"destBuffer.length = " + destBuffer.length +
-					", startDestBuffer = " + startDestBuffer +
-					", origBuffer.length = " + origBuffer.length +
-					", startOrigBuffer = " + startOrigBuffer +
-					", copySize = " + copySize + "." );
-		}
-
-        if ( destBuffer.length < ( startDestBuffer + copySize ) ) {
-            loggererror( "floatBufferIndexedCopy Size copy problem." );
-            return -1;
-        }
-
-        for ( counter = 0; counter < copySize; counter++ ) {
-            destBuffer[ destBufferIndex ] = (int) origBuffer[ origBufferIndex ];
-
-            destBufferIndex++;
-            origBufferIndex++;
-        }
-
-        //loggerdebug( "floatBufferIndexedCopy", counter + " bytes copied." );
-
-        return counter;
-    }
-
-    private int bufferIndexedCopy(float[] destBuffer, int startDestBuffer, int[] origBuffer, int startOrigBuffer, int copySize )
-    {
-        int destBufferIndex = startDestBuffer;
-        int origBufferIndex = startOrigBuffer;
-        int counter = 0;
-
-        if ( kt < 10 )
-        {
-			loggerdebug( "bufferIndexedCopy " +
-					"destBuffer.length = " + destBuffer.length +
-					", startDestBuffer = " + startDestBuffer +
-					", origBuffer.length = " + origBuffer.length +
-					", startOrigBuffer = " + startOrigBuffer +
-					", copySize = " + copySize + "." );
-		}
-
-        if ( destBuffer.length < ( startDestBuffer + copySize ) ) {
-            loggererror( "floatBufferIndexedCopy Size copy problem." );
-            return -1;
-        }
-
-        for ( counter = 0; counter < copySize; counter++ ) {
-            destBuffer[ destBufferIndex ] = (float) origBuffer[ origBufferIndex ];
-
-            destBufferIndex++;
-            origBufferIndex++;
-        }
-
-        //loggerdebug( "floatBufferIndexedCopy", counter + " bytes copied." );
-
-        return counter;
-    }
 
     public void pushAudio( int len, byte[] audio, int ts, int codec ) throws IOException {
 
@@ -521,112 +470,60 @@ public class RtmpParticipant extends RTMPClient implements INetStreamEventHandle
                 audioTs += rtmpEvent.getTimestamp();
 
                 IoBuffer audioData = ( (IStreamData) rtmpEvent ).getData().asReadOnlyBuffer();
-                byte[] asaoInput = SerializeUtils.ByteBufferToByteArray( audioData );
 
-                int offset = 1;
-                int num = asaoInput.length - 1;
+				byte[] asaoInput = new byte[audioData.limit() - 1];
+				audioData.rewind();
+				audioData.position(audioData.position() + 1);
+				audioData.get(asaoInput);
 
-                asao_buffer_processed = false;
+                CodecImpl.decode(recieverEncoderMap, asaoInput, tempL16Buffer);
 
-				if ( num > 0 ) {
+				l16AudioRecv.put(tempL16Buffer);	// Store the L16 audio into the buffer
 
-					do {
-						byte [] asaoBuffer = new byte[num];
-						System.arraycopy(asaoInput, offset, asaoBuffer, 0, num);
-						int encodedBytes = decodeAsao( asaoBuffer );
+    			viewBufferRecv.get(l16Buffer);		// Read 160-int worth of audio
+				sendToBridge(l16Buffer);
 
-						if ( encodedBytes == 0 ) {
+    			if (l16AudioRecv.position() == l16AudioRecv.capacity())
+    			{
+					/**
+					 *  This means we already processed 5 Nelly packets and sent 5 Ulaw packets.
+					 *  However, we have 3 extra Ulaw packets.
+					 *  Fire them off to the bridge. We don't want to discard them as it will
+					 *  result in choppy audio.
+					 */
 
-							break;
-						}
+					for (int i=0; i<3; i++)
+					{
+						viewBufferRecv.get(l16Buffer);
+						sendToBridge(l16Buffer);
+					}
 
-						if ( encodingOffset == 160) {
+					// Reset the buffer's position back to zero and start over.
 
-							//loggerdebug( "send", "Sending packet with " + encodedBytes + " bytes." );
-
-							try {
-
-								if (memberReceiver != null ) {
-									memberReceiver.handleRTMPMedia(encodingBuffer, kt2);
-
-									kt2++;
-
-									if ( kt2 < 10 ) {
-										loggerdebug( "*** " + encodingBuffer.length );
-									}
-								}
-							}
-							catch ( Exception e ) {
-								loggererror( "RtmpParticipant => memberReceiver handleMedia error." );
-								e.printStackTrace();
-							}
-
-							encodingOffset = 0;
-						}
-
-					} while ( !asao_buffer_processed );
+					l16AudioRecv.clear();
+					viewBufferRecv.clear();
 				}
-            }
+			}
         }
 
-        private int decodeAsao(byte[] asaoBuffer)
+        private void sendToBridge(int[] encodingBuffer)
         {
-			boolean isBufferFilled = false;
-			int copyingSize = 0;
-			int finalCopySize = 0;
-			byte[] codedBuffer = new byte[ 160 ];
+			try {
 
-            if ( ( tempBufferRemaining + encodingOffset ) >= 160 ) {
+				if (memberReceiver != null ) {
+					memberReceiver.handleRTMPMedia(encodingBuffer, kt2);
 
-                copyingSize = encodingBuffer.length - encodingOffset;
-                bufferIndexedCopy(encodingBuffer, encodingOffset, tempSendBuffer, tempSendBuffer.length - tempBufferRemaining, copyingSize );
-
-                encodingOffset = 160;
-                tempBufferRemaining -= copyingSize;
-                finalCopySize = 160;
-            }
-            else {
-
-                if ( tempBufferRemaining > 0 )
-                {
-                    bufferIndexedCopy(encodingBuffer,encodingOffset, tempSendBuffer, tempSendBuffer.length - tempBufferRemaining, tempBufferRemaining );
-
-                    encodingOffset += tempBufferRemaining;
-                    finalCopySize += tempBufferRemaining;
-                    tempBufferRemaining = 0;
-
-					if ( kt2 < 10 )
-					{
-						loggerdebug( "decodeAsao "
-						        + "tempBufferRemaining copied -> "
-						        + "encodingOffset = " + encodingOffset
-						        + ", tempBufferRemaining = " + tempBufferRemaining + "." );
+					if ( kt2 < 10 ) {
+						loggerdebug( "*** " + encodingBuffer.length );
 					}
-                }
-                asao_buffer_processed = true;
 
-                CodecImpl.decode(recieverEncoderMap, asaoBuffer, tempSendBuffer);
-                //tempSendBuffer = normalize(tempSendBuffer, 256);
-
-                tempBufferRemaining = tempBuffer.length;
-
-                if ( ( encodingOffset + tempBufferRemaining ) > 160 ) {
-                    copyingSize = encodingBuffer.length - encodingOffset;
-                }
-                else {
-                    copyingSize = tempBufferRemaining;
-                }
-
-                //println( "fillRtpPacketBuffer CopyingSize = " + copyingSize + "." );
-
-                bufferIndexedCopy(encodingBuffer, encodingOffset, tempSendBuffer, 0, copyingSize );
-
-                encodingOffset += copyingSize;
-                tempBufferRemaining -= copyingSize;
-                finalCopySize += copyingSize;
-            }
-
-        	return finalCopySize;
+					kt2++;
+				}
+			}
+			catch ( Exception e ) {
+				loggererror( "RtmpParticipant => sendToBridge error " + e );
+				e.printStackTrace();
+			}
 		}
     }
 }

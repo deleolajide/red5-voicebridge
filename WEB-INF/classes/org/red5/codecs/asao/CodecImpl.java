@@ -18,6 +18,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+//
+// Modified to int[] on input/output for red5-voicebridge
+//
+
 package org.red5.codecs.asao;
 
 public class CodecImpl {
@@ -156,7 +160,7 @@ public class CodecImpl {
         }
     }
 
-    public static void encode(float[] state, float[] in, byte[] out) {
+    public static void encode(float[] state, int[] in, byte[] out) {
 
         float var_8d8[] = new float[256];
         float var_2e8[] = new float[23];
@@ -229,12 +233,14 @@ public class CodecImpl {
         }
     }
 
-    public static void decode(float[] state, byte[] in, float[] out) {
+    public static void decode(float[] state, byte[] in, int[] out_int) {
 
         byte[] unpacked_input = new byte[124];
+
         float[] var_808 = new float[128];
         float[] var_608 = new float[124];
         float[] var_418 = new float[124];
+        float[] out = new float[256];
 
         BitStream bs = new BitStream();
 
@@ -299,6 +305,11 @@ public class CodecImpl {
 
             iTransfm(state, var_808, 7, out, out_off);
         }
+
+        for (int i = 0; i < 256; ++i) {
+
+			out_int[i] = (int) out[i];
+		}
     }
 
     private static void iTransfm(float[] state, float[] in,
@@ -342,7 +353,7 @@ public class CodecImpl {
         }
     }
 
-    private static void fTransfm(float[] state, float[] in, int in_off,
+    private static void fTransfm(float[] state, int[] in, int in_off,
             int len_log2, float[] out, int out_off) {
 
         final int len = 1 << len_log2;
