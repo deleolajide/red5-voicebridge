@@ -33,6 +33,7 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 	private String version = "0.0.0.1";
 	private Config config = Config.getInstance();
 
+	private Map< String, Object > callObjects = new HashMap< String, Object >();
 	private Map< String, CallParticipant > callPartipants = new HashMap< String, CallParticipant >();
     private static ArrayList<ConferenceMonitor> conferenceMonitors = new ArrayList<ConferenceMonitor>();
     private static ArrayList<IServiceCapableConnection> incomingCallListeners = new ArrayList<IServiceCapableConnection>();
@@ -200,11 +201,15 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 				{
 					cp = callPartipants.remove(uid);
 					cp = null;
+
+					Object obj = callObjects.remove(uid);
+					obj = null;
+
 					reportInfo("Call Participant " + uid + " destroyed");
 
 				} else {
 
-					parseCallParameters(parameter, value, cp);
+					parseCallParameters(parameter, value, cp, uid);
 					reportInfo("manageCallParticipant processing " + parameter + " value: " + value);
 
 				}
@@ -243,7 +248,7 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 		}
 	}
 
-    private void makeOutgoingCall(CallParticipant cp)
+    private void makeOutgoingCall(CallParticipant cp, String uid)
     {
     	loginfo("Red5VoiceBridge makeOutgoingCall");
 
@@ -256,12 +261,16 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 					OutgoingCallHandler outgoingCallHandler = new OutgoingCallHandler(this, cp);
 					outgoingCallHandler.start();
 
+					callObjects.put(uid, outgoingCallHandler);
+
 					reportInfo("Outgoing call made to " + cp.getPhoneNumber() + " id: " + cp.getCallId());
 
 				} else {
 
 					TwoPartyCallHandler twoPartyCallHandler = new TwoPartyCallHandler(this, cp);
 					twoPartyCallHandler.start();
+
+					callObjects.put(uid, twoPartyCallHandler);
 
 					reportInfo("Two party call made to " + cp.getPhoneNumber() + " id: " + cp.getCallId());
 				}
@@ -1571,12 +1580,12 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 	}
 
 
-    private void parseCallParameters(String parameter, String value, CallParticipant cp)
+    private void parseCallParameters(String parameter, String value, CallParticipant cp, String uid)
     {
 		if ("makeCall".equalsIgnoreCase(parameter))
 		{
 			try {
-				makeOutgoingCall(cp);
+				makeOutgoingCall(cp, uid);
 			} catch (Exception e) {
 				reportError(e.toString());
 			}
