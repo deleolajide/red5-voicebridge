@@ -2,6 +2,7 @@ package org.red5.server.webapp.voicebridge;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -9,17 +10,21 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import java.net.InetAddress;
 
 public class Config {
 
 	private HashMap<String, Conference> conferences;
 	private HashMap<String, Conference> extensions;
 
-	private NodeList tagConfernces = null;
+	private ArrayList<ProxyCredentials> registrations;
+	private ArrayList<String> registrars;
+
 	private static Config singletonConfig;
 	private String privateHost = "127.0.0.1";
 	private String publicHost = "127.0.0.1";
 	private String conferenceExten = "3000";
+	private String defaultProxy = null;
 
     private boolean prefixPhoneNumber = true;
     private String internationalPrefix = "00";  // for international calls
@@ -33,11 +38,16 @@ public class Config {
 		conferences = new HashMap<String, Conference>();
 		extensions = new HashMap<String, Conference>();
 
+		registrations = new ArrayList<ProxyCredentials>();
+    	registrars = new ArrayList<String>();
+
 		String appPath = System.getProperty("user.dir");
 		String configFile = appPath + File.separator + "webapps" + File.separator + "voicebridge" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
 		//String configFile = appPath + File.separator + ".." + File.separator + "plugins" + File.separator + "redfire" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
 
 		try {
+			System.out.println(String.format("Red5VoiceBridge read config file: %s", configFile));
+
 			DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
 			Document doc = docBuilder.parse(new File(configFile));
@@ -54,12 +64,16 @@ public class Config {
 				publicHost = tagPublicHost.getTextContent();
 			}
 
+			Element tagDefaultProxy = (Element) doc.getElementsByTagName("defaultProxy").item(0);
+
+			if ((tagDefaultProxy.getTextContent() != null) && (tagDefaultProxy.getTextContent().length() > 0)) {
+				defaultProxy = tagDefaultProxy.getTextContent();
+			}
+
 			Element tagConfExten = (Element) doc.getElementsByTagName("conferences").item(0);
 			conferenceExten = tagConfExten.getAttribute("exten");
 
-			tagConfernces = doc.getElementsByTagName("conference");
-
-			System.out.println(String.format("Red5VoiceBridge read config file: %s", configFile));
+			NodeList tagConfernces = doc.getElementsByTagName("conference");
 
 			for (int i=0; i<tagConfernces.getLength(); i++)
 			{
@@ -84,10 +98,38 @@ public class Config {
 				System.out.println(String.format("Red5VoiceBridge conference: %s with pin %s", conference.id, conference.pin));
 			}
 
+			NodeList tagRegisters = doc.getElementsByTagName("register");
+
+			for (int i=0; i<tagRegisters.getLength(); i++)
+			{
+				Element register = (Element) tagRegisters.item(i);
+				System.out.println(String.format("Red5VoiceBridge registration host: %s username: %s authname: %s password: %s realm %s proxy: %s", register.getAttribute("host"), register.getAttribute("username"), register.getAttribute("authname"), register.getAttribute("password"), register.getAttribute("realm"), register.getAttribute("proxy")));
+
+				ProxyCredentials credentials = new ProxyCredentials();
+
+				credentials.setUserName(register.getAttribute("username"));
+				credentials.setUserDisplay(register.getAttribute("display"));
+				credentials.setAuthUserName(register.getAttribute("authname"));
+				credentials.setPassword(register.getAttribute("password").toCharArray());
+				credentials.setRealm(register.getAttribute("realm"));
+				credentials.setProxy(register.getAttribute("proxy"));
+				credentials.setHost(register.getAttribute("host"));
+
+				try {
+					InetAddress inetAddress = InetAddress.getByName(register.getAttribute("host"));
+					registrars.add(register.getAttribute("host"));
+					registrations.add(credentials);
+
+				} catch (Exception e) {
+					System.out.println(String.format("Bad Address  %s ", register.getAttribute("host")));
+				}
+			}
+
 		} catch (Throwable t) {
 			t.printStackTrace();
 		}
 	}
+
 
 	public static Config getInstance() {
 
@@ -97,14 +139,6 @@ public class Config {
 		}
 
 		return singletonConfig;
-	}
-
-	public int getConferencesCount()
-	{
-		if (tagConfernces == null)
-			return 0;
-		else
-			return tagConfernces.getLength();
 	}
 
 	public boolean isValidConference(String id)
@@ -239,6 +273,22 @@ public class Config {
     {
 		return prefixPhoneNumber;
     }
+
+	public String getDefaultProxy()
+	{
+		return defaultProxy;
+	}
+
+	public ArrayList<String> getRegistrars()
+	{
+		return registrars;
+	}
+
+
+	public ArrayList<ProxyCredentials> getRegistrations()
+	{
+		return registrations;
+	}
 
     public String formatPhoneNumber(String phoneNumber, String location)
     {

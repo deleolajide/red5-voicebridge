@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -65,8 +65,8 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 
     private SipUtil sipUtil;
 
-    private ClientTransaction clientTransaction;  // most recent client trans 
-    private String sdpBody;	
+    private ClientTransaction clientTransaction;  // most recent client trans
+    private String sdpBody;
     private String sipCallId;
     private boolean receivedBye;
 
@@ -87,18 +87,18 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
     public SipTPCCallAgent(CallHandler callHandler) {
 	super(callHandler);
 
-	MediaInfo mixerMediaPreference = 
+	MediaInfo mixerMediaPreference =
 	    callHandler.getConferenceManager().getMediaInfo();
 
 	sipUtil = new SipUtil(mixerMediaPreference);
     }
-    
+
     public static void forceGatewayError(boolean forceGatewayError) {
 	SipTPCCallAgent.forceGatewayError = forceGatewayError;
     }
 
     /*
-     * Begin Third-Party Call Control.  
+     * Begin Third-Party Call Control.
      */
     public void initiateCall() throws IOException {
         try {
@@ -108,7 +108,7 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 		Logger.println("Invalid busy treatment:  " + e.getMessage());
 	    }
 
-            Logger.writeFile("Call " + cp 
+            Logger.writeFile("Call " + cp
 		+ ":   Begin SIP third party call");
 
             setState(CallState.INVITED);
@@ -136,25 +136,25 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
             sipServerCallback = SipServer.getSipServerCallback();
 	    sipServerCallback.addSipListener(sipCallId, this);
 	} catch (java.text.ParseException e) {
-            Logger.println("Call " + cp + " Error placing call " + cp +":  " 
+            Logger.println("Call " + cp + " Error placing call " + cp +":  "
 		+  e.getMessage());
-	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " " 
+	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " "
 		+ e.getMessage() + "'");
-	    throw new IOException("Error placing call " + cp + " " 
+	    throw new IOException("Error placing call " + cp + " "
 		+ e.getMessage());
 	} catch (InvalidArgumentException e) {
-            Logger.println("Call " + cp + " Error placing call " + cp +":  " 
+            Logger.println("Call " + cp + " Error placing call " + cp +":  "
 		+  e.getMessage());
-	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " " 
+	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " "
 		+ e.getMessage() + "'");
-	    throw new IOException("Error placing call " + cp + " " 
+	    throw new IOException("Error placing call " + cp + " "
 		+ e.getMessage());
 	} catch (SipException e) {
-            Logger.println("Call " + cp + " Error placing call " + cp +":  " 
+            Logger.println("Call " + cp + " Error placing call " + cp +":  "
 		+  e.getMessage());
-	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " " 
+	    setState(CallState.ENDED, "Reason='Error placing call " + cp + " "
 		+ e.getMessage() + "'");
-	    throw new IOException("Error placing call " + cp + " " 
+	    throw new IOException("Error placing call " + cp + " "
 		+ e.getMessage());
 	}
     }
@@ -164,7 +164,7 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
      */
     public void terminateCall() {
 	if (receivedBye == false) {
-	    if (gotOk == false || 
+	    if (gotOk == false ||
 		    (getState() == CallState.INVITED && callAnswered == false)) {
 
 	        try {
@@ -184,15 +184,15 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 		    Logger.writeFile("Call " + cp + ":  sendBye");
 	            sipUtil.sendBye(clientTransaction);
 	        } catch (Exception e) {
-		    Logger.println("Call " + cp + ":  sendBye" 
+		    Logger.println("Call " + cp + ":  sendBye"
 			+ e.getMessage());
 	        }
-	    } 
+	    }
 	}
     }
 
     /**
-     * Processes SIP requests.  The only request being handled is BYE.  
+     * Processes SIP requests.  The only request being handled is BYE.
      * @param requestReceivedEvent the event containing the SIP request
      */
     public synchronized void processRequest(RequestEvent requestReceivedEvent) {
@@ -213,7 +213,7 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 	    Logger.println("Call " + cp + " got ACK");
         } else {
             // no other requests should come in other than BYE, INVITE or ACK
-            Logger.writeFile("Call " + cp 
+            Logger.writeFile("Call " + cp
 		+ " ignoring request " + request.getMethod());
         }
     }
@@ -236,19 +236,19 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 		receivedBye = true;
 
 		try {
-		    Logger.writeFile("Call " + cp + " has hung up."); 
+		    Logger.writeFile("Call " + cp + " has hung up.");
 
 		    //sipUtil.sendOK(clientTransaction, st, cp);
 		    sipUtil.sendOK(request, st);
 		} catch (Exception e) {
 		    /*
 		     * We sometimes get a null ServerTransaction
-		     */ 
-		} 
+		     */
+		}
 		cancelRequest("hung up");
 		sipServerCallback.removeSipListener(sipCallId);
             } else {
-                /* 
+                /*
 		 * this should not happen since the message has been
                  * delegated to this sip agent.
                  */
@@ -257,15 +257,15 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
                     + "match either party:  " + request);
             }
         } catch (TransactionDoesNotExistException e) {
-            Logger.error("Call " + cp 
+            Logger.error("Call " + cp
 		+ " Transaction not found " + e.getMessage());
         } catch (SipException e) {
-            Logger.exception("Call " + cp + " SIP Stack error", e); 
+            Logger.exception("Call " + cp + " SIP Stack error", e);
 	    cancelRequest("handleBye:  SIP Stack error " + e.getMessage());
         } catch (Exception e) {
-            Logger.exception("Call " + cp + " Unknown error ", e); 
+            Logger.exception("Call " + cp + " Unknown error ", e);
 	    cancelRequest("handleBye:  SIP Stack error " + e.getMessage());
-        } 
+        }
     }
 
     private void handleReInvite(Request request, ServerTransaction st) {
@@ -295,7 +295,7 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 
 	InetSocketAddress rtcpAddress = sdpInfo.getRtcpAddress();
 
-        setEndpointAddress(isa, mediaInfo.getPayload(), 
+        setEndpointAddress(isa, mediaInfo.getPayload(),
 	    sdpInfo.getTransmitMediaInfo().getPayload(),
 	    sdpInfo.getTelephoneEventPayload(), rtcpAddress);
 
@@ -304,14 +304,14 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
         try {
             sipUtil.sendOkWithSdp(request, st, isa, sdpInfo);
         } catch (Exception e) {
-            Logger.println("Call " + cp + 
+            Logger.println("Call " + cp +
 		" Failed to send ok with sdp for re-invite " + e.getMessage());
             return;
         }
     }
 
     /**
-     * Processes SIP responses.  
+     * Processes SIP responses.
      * @param responseReceivedEvent the event containing the SIP response
      *
      * Note:  This method is called by a thread from the SIP stack.
@@ -324,31 +324,31 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 
         try {
             Response response = (Response)responseReceivedEvent.getResponse();
-            ClientTransaction clientTransaction = 
+            ClientTransaction clientTransaction =
 		responseReceivedEvent.getClientTransaction();
 
             int statusCode = response.getStatusCode();
-            
-	    FromHeader fromHeader = (FromHeader) 
+
+	    FromHeader fromHeader = (FromHeader)
 		response.getHeader(FromHeader.NAME);
 
             String displayName = fromHeader.getAddress().getDisplayName();
 
 	    if (Logger.logLevel >= Logger.LOG_SIP) {
-	        Logger.println("Response:  statusCode " 
+	        Logger.println("Response:  statusCode "
 	    	    + statusCode + " state " + getCallState()
-		    + " fromHeader " + displayName + " call participant " 
+		    + " fromHeader " + displayName + " call participant "
 		    + cp.getName());
 	    }
 
 	    if (reasonCallTerminated != null) {
 		/*
-		 * Ignore OK and Request Terminated.  
+		 * Ignore OK and Request Terminated.
 		 * XXX what's the symbol for 487?
 		 */
 		if (statusCode != Response.OK && statusCode != 487) {
 		    if (Logger.logLevel >= Logger.LOG_SIP) {
-		        Logger.println("Call " + cp 
+		        Logger.println("Call " + cp
 			    + ":  request cancelled, ignoring response");
 		    }
 		}
@@ -361,37 +361,52 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 		return;
 	    }
 
-            /* 
+            /*
 	     * Some type of global failure that prevents the
              * CallParticipant from being contacted, report failure.
-             */ 
+             */
 	    if (forceGatewayError) {
 		statusCode = 500;
 		forceGatewayError = false;
 	    }
 
             if (statusCode >= 500 && getState() == CallState.INVITED) {
-                Logger.error("Call " + cp + " gateway error:  " + statusCode 
+                Logger.error("Call " + cp + " gateway error:  " + statusCode
 		    + " " + response.getReasonPhrase());
-		cancelRequest("gateway error: " + statusCode + " " 
-		    + response.getReasonPhrase());
+		cancelRequest("gateway error: " + statusCode + " "   + response.getReasonPhrase());
                 return;
+
+			} else if (statusCode == Response.PROXY_AUTHENTICATION_REQUIRED) {
+
+				if (cp.getProxyCredentials() != null)
+				{
+					try {
+						SipServer.handleChallenge(response, clientTransaction, cp.getProxyCredentials()).sendRequest();
+
+					} catch (Exception e) {
+
+						Logger.println("Proxy authentification failed  " + e);
+					}
+				}
+				return;
+
+
             } else if (statusCode >= 400) {
+
                 // if we get a busy or an unknown error, play busy.
-                Logger.println("Call " + cp 
-		    + " got status code :" + statusCode);
+                Logger.println("Call " + cp  + " got status code :" + statusCode);
 
-		cp.setCallEndTreatment(null);
-		cp.setConferenceJoinTreatment(null);
-		cp.setConferenceLeaveTreatment(null);
+				cp.setCallEndTreatment(null);
+				cp.setConferenceJoinTreatment(null);
+				cp.setConferenceLeaveTreatment(null);
 
-                /* 
-		 * play busy treatment, but deallocate any resources
+                /*
+				 * play busy treatment, but deallocate any resources
                  * held up by ringBack first, if any.
                  */
                 //stopCallAnsweredTreatment();
 
-		if (statusCode == Response.BUSY_HERE) {
+			if (statusCode == Response.BUSY_HERE) {
 		    try {
 			if (busyTreatment != null) {
 			    addTreatment(busyTreatment);
@@ -402,7 +417,7 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 		    } catch (Exception e) {
 		        Logger.error("can't start busy treatment!" + sdpBody);
 		    }
-		
+
 		    CallEvent callEvent = new CallEvent(CallEvent.BUSY_HERE);
 
 		    callEvent.setInfo(response.getReasonPhrase());
@@ -423,10 +438,10 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 	     */
             case CallState.INVITED:
 		if (rejectCall) {
-                    Logger.error("Call " + cp + " gateway error:  " 
+                    Logger.error("Call " + cp + " gateway error:  "
 			+ statusCode + " " + response.getReasonPhrase());
 
-		    cancelRequest("gateway error: " + statusCode + " " 
+		    cancelRequest("gateway error: " + statusCode + " "
 		        + response.getReasonPhrase());
                     return;
 		}
@@ -454,12 +469,12 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
 	    case CallState.ENDED:
 		break;		// ignore the response
 
-            default: 
-		Logger.error("Process Response bad state " + getState() 
+            default:
+		Logger.error("Process Response bad state " + getState()
 		    + "\n" + response);
             }
         } catch (SipException e) {
-            Logger.exception("Call " + cp + " SIP Stack error ", e); 
+            Logger.exception("Call " + cp + " SIP Stack error ", e);
 
 	    cancelRequest(
 		"processResponse:  SIP Stack error " + e.getMessage());
@@ -477,175 +492,161 @@ public class SipTPCCallAgent extends CallSetupAgent implements SipListener {
      * @param clientTransaction the client transaction
      * @throws SipException SIP stack related error
      */
-    private void handleCallParticipantInvited(Response response, 
-	    ClientTransaction clientTransaction) 
-            throws ParseException, SipException, 
-	    InvalidArgumentException {
-
+    private void handleCallParticipantInvited(Response response,  ClientTransaction clientTransaction) throws ParseException, SipException,    InvalidArgumentException
+    {
         FromHeader fromHeader = (FromHeader)
 	    response.getHeader(FromHeader.NAME);
 
-	String displayName = fromHeader.getAddress().getDisplayName();
-	
+		String displayName = fromHeader.getAddress().getDisplayName();
+
         int statusCode = response.getStatusCode();
 
-	if (Logger.logLevel >= Logger.LOG_SIP) {
-            Logger.println("handleCallParticipantInvited " + cp
-		+ " status " + statusCode + " " + response.getReasonPhrase()); 
-	}
+		Logger.println("handleCallParticipantInvited " + cp	+ " status " + statusCode + " " + response.getReasonPhrase());
+		Logger.println("handleCallParticipantInvited , displayname " + displayName);
 
-	if (Logger.logLevel >= Logger.LOG_SIP) {
-            Logger.println("handleCallParticipantInvited , displayname " 
-	        + displayName);
-	}
+		CallIdHeader callIdHeader = (CallIdHeader) response.getHeader(CallIdHeader.NAME);
 
-	CallIdHeader callIdHeader = (CallIdHeader)
-            response.getHeader(CallIdHeader.NAME);
+        if (sipCallId.equals(callIdHeader.getCallId()) &&
+        	displayName.equals(cp.getDisplayName()) &&
+        	(statusCode == Response.OK || statusCode == Response.SESSION_PROGRESS) &&
+        	((CSeqHeader)response.getHeader(CSeqHeader.NAME)).getMethod().equals(Request.INVITE))
+        {
+	    	if (statusCode == Response.SESSION_PROGRESS) {
+				/*
+				* For some calls, we never get an OK.  Instead we just get
+				* SESSION_PROGRESS.  In order to handle these calls, we treat
+				* SESSION_PROGRESS as OK.  If an OK arrives later, we'll
+				* send an ACK.  This flag allows us to enable or
+				* disable this workaround for each call.
+				*
+				* The problem with always treating SESSION_PROGRESS as OK
+				* is that in a conference everybody will hear the ringing sound
+				* which the remote call sends until the call is actually answered.
+				* This can be avoided if joinConfirmation is specified.
+				* The other problem is that if we treat SESSION_PROGRESS
+				* as though the call has been answered, then we'll start
+				* playing the treatment before a person really answers to
+				* hear the treatment.
+				*/
 
-        if (sipCallId.equals(
-	    callIdHeader.getCallId()) &&
-	    displayName.equals(cp.getDisplayName()) &&
-	    (statusCode == Response.OK || 
-	    statusCode == Response.SESSION_PROGRESS) &&
-	    ((CSeqHeader)response.getHeader(CSeqHeader.NAME)).getMethod().
-                equals(Request.INVITE)) {
+				if (cp.getHandleSessionProgress() == false) {
+					Logger.writeFile("Call " + cp + " Ignoring SESSION_PROGRESS");
+					return;
+				}
 
-	    if (statusCode == Response.SESSION_PROGRESS) {
-    		/*
-		 * For some calls, we never get an OK.  Instead we just get
-		 * SESSION_PROGRESS.  In order to handle these calls, we treat
-		 * SESSION_PROGRESS as OK.  If an OK arrives later, we'll 
-		 * send an ACK.  This flag allows us to enable or 
-		 * disable this workaround for each call.
-		 *
-		 * The problem with always treating SESSION_PROGRESS as OK
-		 * is that in a conference everybody will hear the ringing sound 
-		 * which the remote call sends until the call is actually answered.
-		 * This can be avoided if joinConfirmation is specified.
-		 * The other problem is that if we treat SESSION_PROGRESS
-		 * as though the call has been answered, then we'll start
-		 * playing the treatment before a person really answers to
-		 * hear the treatment.
-     	 	 */
-		if (cp.getHandleSessionProgress() == false) {
-		    Logger.writeFile("Call " + cp + " Ignoring SESSION_PROGRESS");
-		    return;
-		}
+				Logger.writeFile("Call " + cp + " Treating SESSION_PROGRESS as OK");
+			}
 
-		Logger.writeFile("Call " + cp + " Treating SESSION_PROGRESS as OK");
-	    }
+			if (response.getRawContent() == null)
+			{
+				Logger.error("Call " + cp + " no SDP in OK Response!");
+				cancelRequest("SIP error!  no SDP in OK Response!");
+				return;
+			}
 
-	    if (response.getRawContent() == null) {
-		Logger.error("Call " + cp + " no SDP in OK Response!");
-		cancelRequest("SIP error!  no SDP in OK Response!");
-		return;
-	    }
+			this.clientTransaction = clientTransaction;
 
-            this.clientTransaction = clientTransaction;
+			if (statusCode == Response.OK)
+			{
+				gotOk = true;
+				Logger.writeFile("Call " + cp + " Got OK, call answered\n" + response);
+			}
 
-	    if (statusCode == Response.OK) {
-		gotOk = true;
+			ToHeader toHeader = (ToHeader)response.getHeader(ToHeader.NAME);
 
-                Logger.writeFile("Call " + cp + " Got OK, call answered\n" 
-		    + response);
-	    }
+				/*
+			 * We got an OK response.
+			 *
+			 * send an ACK back to the CallParticipant
+				 */
 
-	    ToHeader toHeader = (ToHeader)response.getHeader(ToHeader.NAME);
+			if (statusCode == Response.OK) {
+				sipUtil.sendAck(clientTransaction);
+				ackSent = true;
+			}
 
-            /* 
-	     * We got an OK response.
-	     *
-	     * send an ACK back to the CallParticipant
-             */
-	    if (statusCode == Response.OK) {
-                sipUtil.sendAck(clientTransaction);
-		ackSent = true;
-	    }
+			if (callAnswered) {
+				Logger.writeFile("Call " + cp + " done processing OK");
+				return;
+			}
 
-	    if (callAnswered) {
-		Logger.writeFile("Call " + cp + " done processing OK");
-		return;
-	    }
+			/*
+			 * Remember the IP and port of where to send data to
+			 * the CallParticipant.
+			 */
 
-	    /*
-	     * Remember the IP and port of where to send data to
-	     * the CallParticipant.
-	     */
-	    sdpBody = new String(response.getRawContent());
+			sdpBody = new String(response.getRawContent());
 
-	    SdpInfo sdpInfo;
+			SdpInfo sdpInfo;
 
-	    try {
-	        sdpInfo = sipUtil.getSdpInfo(sdpBody, false);
-	    } catch (ParseException e) {
-		Logger.error("Call " + cp + " Invalid SDP in OK Response! "
-		    + e.getMessage());
-		cancelRequest("SIP error!  Invalid SDP in OK Response!");
-	        return;
-	    }
+			try {
+				sdpInfo = sipUtil.getSdpInfo(sdpBody, false);
 
-	    MediaInfo mediaInfo = sdpInfo.getMediaInfo();
+			} catch (ParseException e) {
 
-            InetSocketAddress isa = new InetSocketAddress(
-	        sdpInfo.getRemoteHost(), sdpInfo.getRemotePort());
+				Logger.error("Call " + cp + " Invalid SDP in OK Response! "	+ e.getMessage());
+				cancelRequest("SIP error!  Invalid SDP in OK Response!");
+				return;
+			}
 
-	    InetSocketAddress rtcpAddress = sdpInfo.getRtcpAddress();
+			MediaInfo mediaInfo = sdpInfo.getMediaInfo();
+			InetSocketAddress isa = new InetSocketAddress(sdpInfo.getRemoteHost(), sdpInfo.getRemotePort());
+			InetSocketAddress rtcpAddress = sdpInfo.getRtcpAddress();
+			setEndpointAddress(isa, mediaInfo.getPayload(),sdpInfo.getTransmitMediaInfo().getPayload(),sdpInfo.getTelephoneEventPayload(), rtcpAddress);
 
-            setEndpointAddress(isa, mediaInfo.getPayload(), 
-	        sdpInfo.getTransmitMediaInfo().getPayload(),
-	        sdpInfo.getTelephoneEventPayload(), rtcpAddress);
+			/*
+			 * The CallParticipant has answered.
+			 * If join confirmation is required, we remain in the
+			 * INVITED state.  We set the callAnswered flag so that
+			 * if the join confirmation times out we know to
+			 * send a BYE rather than a CANCEL.
+			 */
 
-	    /*
-	     * The CallParticipant has answered.
-	     * If join confirmation is required, we remain in the
-	     * INVITED state.  We set the callAnswered flag so that
-	     * if the join confirmation times out we know to
-	     * send a BYE rather than a CANCEL.
-	     */
-	    callAnswered = true;
+			callAnswered = true;
 
-	    if (cp.getJoinConfirmationTimeout() == 0) {
-	        setState(CallState.ANSWERED);
-	    }
+			if (cp.getJoinConfirmationTimeout() == 0) {
+				setState(CallState.ANSWERED);
+			}
 
-	    /*
-	     * Start treatment if any and wait for it to finish.
-	     * When the treatment finishes, notification will
-	     * be delivered to our parent which will indicate
-	     * we're ready for the conference.
-	     *
-	     * If there's no treatment to be played, we're ready now
-	     * unless we're waiting for join confirmation..
-	     */
-	    initializeCallAnsweredTreatment();
+			/*
+			 * Start treatment if any and wait for it to finish.
+			 * When the treatment finishes, notification will
+			 * be delivered to our parent which will indicate
+			 * we're ready for the conference.
+			 *
+			 * If there's no treatment to be played, we're ready now
+			 * unless we're waiting for join confirmation..
+			 */
+			initializeCallAnsweredTreatment();
 
-	    if (callAnsweredTreatment != null) {
-	        startCallAnsweredTreatment();
-	    } else {
-		if (cp.getJoinConfirmationTimeout() == 0) {
-                    setState(CallState.ESTABLISHED);
-		}
-	    }
+			if (callAnsweredTreatment != null) {
+				startCallAnsweredTreatment();
+			} else {
+
+				if (cp.getJoinConfirmationTimeout() == 0) {
+						setState(CallState.ESTABLISHED);
+				}
+			}
+
         } else {
-            Logger.writeFile("Call " + cp 
-		+ " Ignoring response: " + response.getReasonPhrase());
+            Logger.writeFile("Call " + cp + " Ignoring response: " + response.getReasonPhrase());
 
-	    if (Logger.logLevel >= Logger.LOG_SIP) {
-                Logger.println("Call " + cp + " Response: " + response);
-	    }
-	}
+			if (Logger.logLevel >= Logger.LOG_SIP) {
+					Logger.println("Call " + cp + " Response: " + response);
+			}
+		}
     }
 
     /**
-     * Processes a retransmit or expiration Timeout of an underlying 
+     * Processes a retransmit or expiration Timeout of an underlying
      * {@link Transaction} handled by this SipListener. This Event notifies the
      * application that a retransmission or transaction Timer expired in the
      * SipProvider's transaction state machine. The TimeoutEvent encapsulates
-     * the specific timeout type and the transaction identifier either client 
-     * or server upon which the timeout occured. The type of Timeout can by 
-     * determined by: 
+     * the specific timeout type and the transaction identifier either client
+     * or server upon which the timeout occured. The type of Timeout can by
+     * determined by:
      * <code>timeoutType = timeoutEvent.getTimeout().getValue();</code>
-     * 
+     *
      * @param timeoutEvent - the timeoutEvent received indicating either the
      * message retransmit or transaction timed out.
      */

@@ -46,6 +46,8 @@ import java.util.Vector;
 
 import java.text.ParseException;
 
+import org.red5.server.webapp.voicebridge.*;
+
 /**
  * A utility class used to construct and parse sip
  * messages, and other SIP-transaction-related tasks.
@@ -223,46 +225,12 @@ if (false) {
     public ClientTransaction sendInvite(CallParticipant cp, InetSocketAddress isa)
 	    throws InvalidArgumentException, SipException, ParseException {
 
-	if (Bridge.getPublicHost().equals(isa.getAddress()) == false) {
-	    isa = new InetSocketAddress(Bridge.getPublicHost(), isa.getPort());
-	}
+		if (Bridge.getPublicHost().equals(isa.getAddress()) == false) {
+			isa = new InetSocketAddress(Bridge.getPublicHost(), isa.getPort());
+		}
 
-	String callee = cp.getPhoneNumber();
-
-	String sdp = generateSdp(cp, isa);
-
- 	InetAddress remoteAddress = null;
-
-        try {
-            String server;
-
-            int ix;
-
-            if ((ix = callee.indexOf("@")) < 0) {
-                Logger.writeFile("sendInvite can't translate address "
-                    + "because callee doesn't have host in it:  " + callee);
-            } else {
-                server = callee.substring(ix + 1);
-
-                if ((ix = server.indexOf(":")) < 0 &&
-		        (ix = server.indexOf(";")) < 0 &&
-			(ix = server.indexOf("\r")) < 0 &&
-			(ix = server.indexOf("\n")) < 0 &&
-			(ix = server.indexOf(" ")) < 0) {
-                    Logger.writeFile("sendInvite can't translate address "
-                        + "because callee doesn't have host in it:  " + callee);
-                } else {
-		    server = server.substring(0, ix);
-                    remoteAddress = InetAddress.getByName(server);
-		    sdp = generateSdp(cp, isa);
-                }
-            }
-        } catch (Exception e) {
-            Logger.println("sendInvite exception:  " + e.getMessage());
-	    throw new SipException("sendInvite exception:  " + e.getMessage());
-        }
-
-        return sendInvite(cp, sdp);
+		String sdp = generateSdp(cp, isa);
+		return sendInvite(cp, sdp);
     }
 
     public String generateSdp(CallParticipant cp, InetSocketAddress isa) {
@@ -325,11 +293,10 @@ if (false) {
         ArrayList viaHeaders = null;
         ContentTypeHeader contentTypeHeader = null;
         Request invite = null;
+        String obProxy = null;
 
         /*
          * We need a name and number to identify the party placing the call.
-         * Since TPCC is the party placing the call and it doesn't have a
-	 * phone number, we pick something with minimal visual impact, e.g. ".".
          * There are some restrictions when using the Vocal Proxy.
          *
          * If the number being called has 4 digits, then the request is
@@ -350,7 +317,7 @@ if (false) {
          * <tpccName> is the identifier of who's making the call.
          */
 	String fromName = cp.getDisplayName();
-	String fromNumber = "."; 	// see comments above.
+	String fromNumber = "voicebridge";
 	String toNumber = cp.getPhoneNumber();
 
         // int toSipPort = SipServer.getSipAddress().getPort();
@@ -363,131 +330,168 @@ if (false) {
 	    proxy = SipServer.getDefaultSipProxy();
 	}
 
-	String voipGateway = cp.getVoIPGateway();
+	String voipGateway = null;
 
-	if (toNumber.length() <= 4) {
-	    /*
-	     * XXX Special case for <= 4 digit phone numbers
-	     */
+   	if (toNumber.indexOf("sip:") == 0) {
+		/*
+		 * If a SIP URI is specified, parse it and send
+		 * the request directly to the target unless sendSipUriToProxy is false.
+		 *
+		 * If this request is sent to the proxy
+		 * the endpoint must be registered with the proxy.
+		 */
+		Address address = null;
+		SipURI sipURI = null;
+		String host = null;
+		String user = null;
+
+		try {
+			address = addressFactory.createAddress(toNumber);
+			sipURI = (SipURI)address.getURI();
+			host = sipURI.getHost();
+			user = sipURI.getUser();
+		} catch (ParseException e) {
+			Logger.println("parse exception:  " + toNumber + " sipUri " + sipURI + " host " + host + " user " + user);
+		}
+
+		if (Logger.logLevel >= Logger.LOG_SIP) {
+			Logger.println("address: " + address);
+			Logger.println("sipURI: " + sipURI);
+			Logger.println("host: " + host);
+			Logger.println("user: " + user);
+		}
+
+		if (SipServer.getSendSipUriToProxy() == false && user != null) {
+			InetAddress inetAddress;
+
+			try {
+				inetAddress = InetAddress.getByName(host);
+
+				voipGateway = inetAddress.getHostAddress();
+
+				int port = sipURI.getPort();
+
+				if (port > 0) {
+					toSipPort = port;
+				}
+
+				toNumber = user;
+
+				/*
+				 * Keep just the User information from the URI.
+				 * XXX Not sure why I should do this.
+				 */
+				//cp.setPhoneNumber(toNumber);
+
+				Logger.println("Call " + cp + " Sending INVITE directly to " + inetAddress + ":" + toSipPort);
+			} catch (UnknownHostException e) {
+
+				/*
+				 * Let proxy handle it
+				 */
+				voipGateway = proxy;
+
+				Logger.println("Call " + cp + " Using proxy " + proxy + " for " + toNumber);
+
+				// XXX Not sure why I should do this.
+				//cp.setPhoneNumber(toNumber.substring(4));  // skip sip:
+				toNumber = toNumber.substring(4);
+	   		}
+
+		} else {
+			voipGateway = proxy;
+
+			Logger.println("Call " + cp + " Using proxy " + proxy  + " for " + toNumber);
+
+			// XXX Not sure why I should do this.
+			//cp.setPhoneNumber(toNumber.substring(4));  // skip sip:
+			toNumber = toNumber.substring(4);
+		}
+
+	} else {		// telephone number
+
 	    voipGateway = proxy;
-	    Logger.println("Call " + cp + " Using proxy " + proxy
-		+ " for " + toNumber);
-        } else if (toNumber.indexOf("sip:") == 0) {
-            /*
-             * If a SIP URI is specified, parse it and send
-             * the request directly to the target unless sendSipUriToProxy is false.
-	     *
-             * If this request is sent to the proxy
-             * the endpoint must be registered with the proxy.
-             */
-            Address address = null;
-            SipURI sipURI = null;
-            String host = null;
-            String user = null;
-
-            try {
-                address = addressFactory.createAddress(toNumber);
-                sipURI = (SipURI)address.getURI();
-                host = sipURI.getHost();
-                user = sipURI.getUser();
-            } catch (ParseException e) {
-		Logger.println("parse exception:  " + toNumber
-		    + " sipUri " + sipURI + " host " + host
-		    + " user " + user);
-            }
-
-	    if (Logger.logLevel >= Logger.LOG_SIP) {
-	        Logger.println("address: " + address);
-	        Logger.println("sipURI: " + sipURI);
-	        Logger.println("host: " + host);
-	        Logger.println("user: " + user);
-	    }
-
-            if (SipServer.getSendSipUriToProxy() == false && user != null) {
-                InetAddress inetAddress;
-
-                try {
-                    inetAddress = InetAddress.getByName(host);
-
-                    voipGateway = inetAddress.getHostAddress();
-
-                    int port = sipURI.getPort();
-
-                    if (port > 0) {
-                        toSipPort = port;
-                    }
-
-                    toNumber = user;
-
-                    /*
-                     * Keep just the User information from the URI.
-		     * XXX Not sure why I should do this.
-                     */
-                    //cp.setPhoneNumber(toNumber);
-
-            	    Logger.println("Call " + cp + " Sending INVITE directly to "
-			+ inetAddress + ":" + toSipPort);
-                } catch (UnknownHostException e) {
-		    /*
-		     * Let proxy handle it
-		     */
-	            voipGateway = proxy;
-
-            	    Logger.println("Call " + cp + " Using proxy " + proxy
-                	+ " for " + toNumber);
-
-		    // XXX Not sure why I should do this.
-	            //cp.setPhoneNumber(toNumber.substring(4));  // skip sip:
-		    toNumber = toNumber.substring(4);
-                }
-	    } else {
-	        voipGateway = proxy;
-
-                Logger.println("Call " + cp + " Using proxy " + proxy
-                    + " for " + toNumber);
-
-		// XXX Not sure why I should do this.
-	        //cp.setPhoneNumber(toNumber.substring(4));  // skip sip:
-		toNumber = toNumber.substring(4);
-	    }
+	    Logger.println("Call " + cp + " Using proxy " + proxy + " for " + toNumber);
 	}
 
 	if (toNumber.indexOf("@") < 0 && CallHandler.enablePSTNCalls() == false) {
 	    throw new SipException("PSTN calls are not allowed:  " + cp);
 	}
 
-	if (Logger.logLevel >= Logger.LOG_SIP) {
-	    Logger.println("fromName " + fromName + " fromNumber "
-		+ fromNumber);
+	ArrayList<ProxyCredentials> proxyCredentialList = SipServer.getProxyCredentials();
+	boolean gatewayRequired = false;
 
-	    Logger.println("toName " + cp.getName() + " toNumber "
-		+ cp.getPhoneNumber());
+	if (voipGateway == null)
+	{
+		if (proxy == null)
+		{
+			if (proxyCredentialList.size() == 0)
+			{
+				Logger.println("Call " + cp + " no voipGateway is available!");
+				throw new SipException("No voip Gateway! " + cp);
+
+			} else gatewayRequired = true;
+
+
+		} else {
+
+			voipGateway = proxy;
+			gatewayRequired = true;
+		}
+
+	} else {
+
+		if (voipGateway.equals(proxy))
+			gatewayRequired = true;
 	}
 
-        fromAddress = addressFactory.createSipURI(fromNumber, ourIpAddress);
-        fromAddress.setPort(ourSipPort);
-        fromNameAddress = addressFactory.createAddress(fromName, fromAddress);
-        fromHeader = headerFactory.createFromHeader(fromNameAddress,
-            new Integer((int)(Math.random() * 10000)).toString());
+	if (gatewayRequired)
+	{
+		int voipIndex = 0;
 
-        /* create To Header
-         * e.g. "Willie Walker"<sip:30039@152.70.1.28:5060>
-         *   where "Willie Walker" == cp.getName()
-         *                      30039 == cp.getNumber()
-         *             152.70.1.28 == cp.getIpAddress()
-         *                    5060 == cp.getPort()
-         */
-	if (voipGateway == null) {
-	    Logger.println("Call " + cp + " voipGateway is null!");
+		for (int i=0; i<proxyCredentialList.size(); i++)
+		{
+			ProxyCredentials proxyCredentials = proxyCredentialList.get(i);
 
-	    ArrayList<String> voipGateways = SipServer.getVoIPGateways();
+			if (voipGateway.equals(proxyCredentials.getProxy()))
+			{
+				voipIndex = i;
+			}
+		}
 
-	    if (voipGateways.size() == 0) {
-		throw new SipException("No voip Gateway! " + cp);
-	    }
+		ProxyCredentials proxyCredentials = proxyCredentialList.get(voipIndex);
 
-	    voipGateway = voipGateways.get(0);
+		fromName = proxyCredentials.getUserDisplay();
+		voipGateway = proxyCredentials.getHost();
+		obProxy = proxyCredentials.getProxy();
+		fromAddress = addressFactory.createSipURI(proxyCredentials.getUserName(), voipGateway);
+        toAddress = addressFactory.createSipURI(toNumber, voipGateway);
+
+        cp.setProxyCredentials(proxyCredentials);				// we need this to match SIP transaction later
+        cp.setDisplayName(proxyCredentials.getUserDisplay());	// we need this to get proxy authentication details later
+
+	} else {
+
+		fromAddress = addressFactory.createSipURI(fromNumber, ourIpAddress);
+		fromAddress.setPort(ourSipPort);
+        toAddress = addressFactory.createSipURI(toNumber, voipGateway);
 	}
+
+
+	Logger.println("from " + fromAddress);
+	Logger.println("to " + toAddress);
+
+	fromNameAddress = addressFactory.createAddress(fromName, fromAddress);
+	fromHeader = headerFactory.createFromHeader(fromNameAddress, new Integer((int)(Math.random() * 10000)).toString());
+
+	/* create To Header
+	 * e.g. "Willie Walker"<sip:30039@152.70.1.28:5060>
+	 *   where "Willie Walker" == cp.getName()
+	 *                      30039 == cp.getNumber()
+	 *             152.70.1.28 == cp.getIpAddress()
+	 *                    5060 == cp.getPort()
+	 */
+
 
 	if (Bridge.getPrivateHost().startsWith("127.") &&
 	    voipGateway.equals("127.0.0.1") == false) {
@@ -507,8 +511,6 @@ if (false) {
 
 	Logger.writeFile("Call " + cp + " voip gateway / proxy " + voipGateway
 	    + " port " + toSipPort);
-
-        toAddress = addressFactory.createSipURI(toNumber, voipGateway);
 
 	/*
 	 * Don't do this because port should be that of the toNumber if specified
@@ -598,6 +600,19 @@ if (false) {
 	    headerFactory.createContactHeader(contactAddress);
 
 	invite.addHeader(contactHeader);
+
+	if (obProxy != null)
+	{
+		try {
+			SipURI routeURI = (SipURI) addressFactory.createURI("sip:" + obProxy + ";lr");
+			RouteHeader routeHeader = headerFactory.createRouteHeader(addressFactory.createAddress(routeURI));
+			invite.addHeader(routeHeader);
+
+		} catch (Exception e) {
+
+			Logger.error("Creating registration route error " + e);
+		}
+	}
 
 	if (sdp != null) {
             contentTypeHeader =

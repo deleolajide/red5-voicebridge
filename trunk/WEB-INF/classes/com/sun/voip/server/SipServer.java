@@ -35,18 +35,14 @@ import javax.sip.address.*;
 import javax.sip.header.*;
 import javax.sip.message.*;
 
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.EventObject;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.TooManyListenersException;
+import java.util.*;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+
+import org.red5.server.webapp.voicebridge.*;
 
 /**
  * The SIP Server sets up a SIP Stack and handles SIP requests and responses.
@@ -59,7 +55,6 @@ import java.net.UnknownHostException;
  * the SIP CallId of the SIP message.
  *
  * Properties:
- * com.sun.voip.server.SIPProxy = NIST_PROXY_SERVER
  * gov.nist.jainsip.stack.enableUDP = 5060;
  */
 public class SipServer implements SipListener {
@@ -76,8 +71,9 @@ public class SipServer implements SipListener {
     /*
      * IP address of the Cisco SIP/VoIP gateways
      */
-    private static ArrayList<String> voIPGateways = new ArrayList();
-    private static ArrayList<String> voIPGatewayLoginInfo = new ArrayList();
+    private static ArrayList<String> voIPGateways = new ArrayList<String>();
+    private static ArrayList<ProxyCredentials> voIPGatewayLoginInfo = new ArrayList<ProxyCredentials>();
+	private static ArrayList<RegisterProcessing> registrations = new ArrayList<RegisterProcessing>();
 
     /*
      * flag to indicate whether to send SIP Uri's to a proxy or directly
@@ -103,54 +99,29 @@ public class SipServer implements SipListener {
     private static SipServerCallback sipServerCallback;
     private static InetSocketAddress sipAddress;
 
-    /**
-     * Constructor
-     */
-    public static void main(String[] args) {
-	if (args.length != 2) {
-	    Logger.println("Usage:  java SipServer <gateway IP Address> <sip URI>");
-	    System.exit(1);
-	}
-
-	new RegisterProcessing(args[0], args[1]);
-    }
-
-    public SipServer(String localHostAddress, Properties properties) {
+     public SipServer(Config config, Properties properties) {
         sipListenersTable = new Hashtable();
         sipServerCallback = new SipServerCallback();
-        setup(localHostAddress, properties);
+        setup(config, properties);
     }
 
     /**
      * Sets up and initializes the sip server, including the sipstack.
      */
-    private void setup(String localHostAddress, Properties properties) {
+    private void setup(Config config, Properties properties)
+    {
+		String localHostAddress = config.getPrivateHost();
         properties.setProperty("javax.sip.IP_ADDRESS", localHostAddress);
 
         /*
          * get IPs of the voip gateways
          */
-        String gateways = System.getProperty(
-                "com.sun.voip.server.VoIPGateways", "");
 
-        /*
-         * parse voIPGateways and create the list with IP addresses
-         * of VoIP gateways
-         */
-        if (setVoIPGateways(gateways) == false) {
-            Logger.error("Invalid VoIP gateways " + gateways);
-        }
+        setVoIPGateways(config);
 
-	if (voIPGateways.size() == 0) {
-	    Logger.println("There are no VoIP gateways.  "
-		+ "You cannot make calls to the phone system.");
-            Logger.println("If you want to use the phone system "
-		+ "you can specify VoIP gateways with "
-		+ "-Dcom.sun.voip.server.VoIPGateways.");
-	} else {
-            Logger.println("VoIP gateways: " + getAllVoIPGateways());
-            Logger.println("");
-	}
+		if (voIPGateways.size() == 0) {
+			Logger.println("There are no VoIP gateways.  You cannot make calls to the phone system.");
+		}
 
         /*
 	 * Obtain an instance of the singleton SipFactory
@@ -186,13 +157,13 @@ public class SipServer implements SipListener {
              * SipStackImpl in the classpath
              */
             Logger.exception("could not stsart sip stack.", e);
-            System.exit(-1);
+            return;
         } catch(SipException e) {
             /*
 	     * could not create SipStack for some other reason
 	     */
             Logger.exception("could not start sip stack.", e);
-            System.exit(-1);
+            return;
         }
 
 	ListeningPoint lp = null;
@@ -225,14 +196,13 @@ public class SipServer implements SipListener {
             sipProvider.addSipListener(this);
 
 	    Logger.println("");
-            Logger.println("Bridge private address:   "
-	        + properties.getProperty("javax.sip.IP_ADDRESS"));
+            Logger.println("Bridge private address:   " + properties.getProperty("javax.sip.IP_ADDRESS"));
             Logger.println("Bridge private SIP port:  " + lp.getPort());
 
             /*
 	     * get IPs of the SIP Proxy server
 	     */
-            defaultSipProxy = System.getProperty("com.sun.voip.server.SIPProxy", "");
+            defaultSipProxy = config.getDefaultProxy();
 
             /*
 	     * Initialize SipUtil class.  Do this last so that
@@ -240,28 +210,33 @@ public class SipServer implements SipListener {
              */
             SipUtil.initialize();
 
-	    for (int i = 0; i < voIPGatewayLoginInfo.size(); i++) {
-		String loginInfo = voIPGatewayLoginInfo.get(i);
+			for (int i = 0; i < voIPGatewayLoginInfo.size(); i++)
+			{
+				try {
+					InetAddress inetAddress = InetAddress.getByName(voIPGateways.get(i));
+					registrations.add(new RegisterProcessing(inetAddress.getHostAddress(), voIPGateways.get(i), voIPGatewayLoginInfo.get(i)));
 
-		if (loginInfo.length() > 0) {
-		    new RegisterProcessing(voIPGateways.get(i), loginInfo);
-		}
-	    }
+				} catch (Exception e) {
+					System.out.println(String.format("Bad Address  %s ", voIPGateways.get(i)));
+					continue;
+				}
+			}
+
         } catch(NullPointerException e) {
             Logger.exception("Stack has no ListeningPoints", e);
-            System.exit(-1);
+            return;
         } catch(ObjectInUseException e) {
             Logger.exception("Stack has no ListeningPoints", e);
-            System.exit(-1);
+            return;
         } catch(TransportNotSupportedException e) {
 	    Logger.exception("TransportNotSupportedException", e);
-            System.exit(-1);
+            return;
 	} catch(TooManyListenersException e) {
 	    Logger.exception("TooManyListenersException", e);
-            System.exit(-1);
+            return;
 	} catch(InvalidArgumentException e) {
 	    Logger.exception("InvalidArgumentException", e);
-            System.exit(-1);
+            return;
 	}
 
         Logger.println("Default SIP Proxy:        " + defaultSipProxy);
@@ -272,70 +247,17 @@ public class SipServer implements SipListener {
         return voIPGateways;
     }
 
-    /**
-     * Set the IP address of the VoIPGateway.
-     * @param ip String with dotted IP address
-     */
-    public static boolean setVoIPGateways(String gateways) {
-	voIPGateways = new ArrayList();
-	voIPGatewayLoginInfo = new ArrayList();
-
-        gateways = gateways.replaceAll("\\s", "");
-
-	if (gateways.length() == 0) {
-	    return true;
-	}
-
-	String[] g = gateways.split(",");
-
-        for (int i = 0; i < g.length; i++) {
-	    String[] gatewayInfo = g[i].split(";");
-
-            try {
-                /*
-                 * Make sure address is valid
-                 */
-                InetAddress inetAddress =
-                    InetAddress.getByName(gatewayInfo[0]);
-
-                voIPGateways.add(inetAddress.getHostAddress());
-
-		if (gatewayInfo.length > 1) {
-		    voIPGatewayLoginInfo.add(gatewayInfo[1]);
-		    //new RegisterProcessing(gatewayInfo[0], gatewayInfo[1]); do later BAO
-		} else {
-		    voIPGatewayLoginInfo.add("");
-		}
-            } catch (UnknownHostException e) {
-                return false;
-            }
-        }
-
-        return true;
+    public static ArrayList<ProxyCredentials> getProxyCredentials() {
+        return voIPGatewayLoginInfo;
     }
 
-    /**
-     * Get String with all VoIP Gateways.
-     */
-    public static String getAllVoIPGateways() {
-        String s = "";
-
-        for (int i = 0; i < voIPGateways.size(); i++) {
-            s += (String) voIPGateways.get(i);
-
-	    String gatewayLoginInfo = voIPGatewayLoginInfo.get(i);
-
-	    if (gatewayLoginInfo.length() > 0) {
-	        s += ";" + voIPGatewayLoginInfo.get(i);
-	    }
-
-            if (i < voIPGateways.size() - 1) {
-                s += ", ";
-            }
-        }
-
-        return s;
+    public static void setVoIPGateways(Config config)
+    {
+		voIPGateways = config.getRegistrars();
+		voIPGatewayLoginInfo = config.getRegistrations();
+        return;
     }
+
 
     /**
      * set flag to indicate whether to send SIP Uri's to a proxy or directly
@@ -436,10 +358,9 @@ public class SipServer implements SipListener {
             } else {
 		if (request.getMethod().equals(Request.REGISTER)) {
 		    handleRegister(request, requestEvent);
+
 		} else if (!request.getMethod().equals(Request.INVITE)) {
-                    Logger.writeFile("sipListener could not be found for "
-                        + sipCallId + " " + request.getMethod()
-		        + ".  Ignoring");
+                    Logger.writeFile("sipListener could not be found for " + sipCallId + " " + request.getMethod() + ".  Ignoring");
 		    return;
                 }
 	    }
@@ -573,15 +494,19 @@ public class SipServer implements SipListener {
      * the appropriate SipListener.
      * @param responseReceivedEvent the response event
      */
-    public void processResponse(ResponseEvent responseReceivedEvent) {
-	if (responseReceivedEvent.getClientTransaction() == null) {
-            Logger.error("processResponse:  clientTransaction is null! "
-		+ responseReceivedEvent.getResponse());
-	    return;
+    public void processResponse(ResponseEvent responseReceivedEvent)
+    {
+        Response response = responseReceivedEvent.getResponse();
+
+		if (responseReceivedEvent.getClientTransaction() == null)
+		{
+            Logger.error("SipServer processResponse:  clientTransaction is null! " + responseReceivedEvent.getResponse());
+	    	return;
         }
 
         try {
             SipListener sipListener = findSipListener(responseReceivedEvent);
+
             if (sipListener != null) {
                 sipListener.processResponse(responseReceivedEvent);
             } else {
@@ -592,15 +517,12 @@ public class SipServer implements SipListener {
                  * requests to a party that just got hung up on (e.g.
                  * if party A hangs up, we send a BYE to party B).
                  */
-                Response response = responseReceivedEvent.getResponse();
-                if (response.getStatusCode() != Response.OK) {
-		    CallIdHeader callIdHeader = (CallIdHeader)
-                        response.getHeader(CallIdHeader.NAME);
 
-                    Logger.writeFile("sipListener could not be found for "
-                        + callIdHeader.getCallId() + " "
-                        + response.getStatusCode() + ".  Ignoring");
-		}
+                if (response.getStatusCode() != Response.OK && response.getStatusCode() != 201)
+                {
+		    		CallIdHeader callIdHeader = (CallIdHeader) response.getHeader(CallIdHeader.NAME);
+                    //Logger.writeFile("sipListener could not be found for " + callIdHeader.getCallId() + " " + response.getStatusCode() + ".  Ignoring");
+				}
             }
         } catch (Exception e) {
             /* FIXME: if any exception happens at this stage,
@@ -787,6 +709,150 @@ public class SipServer implements SipListener {
         if (Logger.logLevel >= Logger.LOG_SIP) {
             Logger.println("processTransactionTerminated called");
 	}
+    }
+
+    public synchronized static ClientTransaction handleChallenge(Response challenge, ClientTransaction challengedTransaction, ProxyCredentials proxyCredentials)
+    {
+        try {
+
+            String branchID = challengedTransaction.getBranchId();
+            Request challengedRequest = challengedTransaction.getRequest();
+            Request reoriginatedRequest = (Request) challengedRequest.clone();
+
+            ListIterator authHeaders = null;
+
+            if (challenge == null || reoriginatedRequest == null)
+                throw new NullPointerException("A null argument was passed to handle challenge.");
+
+            // CallIdHeader callId =
+            // (CallIdHeader)challenge.getHeader(CallIdHeader.NAME);
+
+            if (challenge.getStatusCode() == Response.UNAUTHORIZED)
+                authHeaders = challenge.getHeaders(WWWAuthenticateHeader.NAME);
+
+            else if (challenge.getStatusCode() == Response.PROXY_AUTHENTICATION_REQUIRED)
+                authHeaders = challenge.getHeaders(ProxyAuthenticateHeader.NAME);
+
+            if (authHeaders == null)
+                throw new SecurityException(
+                        "Could not find WWWAuthenticate or ProxyAuthenticate headers");
+
+            // Remove all authorization headers from the request (we'll re-add
+            // them
+            // from cache)
+            reoriginatedRequest.removeHeader(AuthorizationHeader.NAME);
+            reoriginatedRequest.removeHeader(ProxyAuthorizationHeader.NAME);
+            reoriginatedRequest.removeHeader(ViaHeader.NAME);
+
+            // rfc 3261 says that the cseq header should be augmented for the
+            // new
+            // request. do it here so that the new dialog (created together with
+            // the new client transaction) takes it into account.
+            // Bug report - Fredrik Wickstrom
+            CSeqHeader cSeq = (CSeqHeader) reoriginatedRequest.getHeader((CSeqHeader.NAME));
+            cSeq.setSequenceNumber(cSeq.getSequenceNumber() + 1);
+            reoriginatedRequest.setHeader(cSeq);
+
+            ClientTransaction retryTran = sipProvider.getNewClientTransaction(reoriginatedRequest);
+
+            WWWAuthenticateHeader authHeader = null;
+
+            while (authHeaders.hasNext()) {
+                authHeader = (WWWAuthenticateHeader) authHeaders.next();
+                String realm = authHeader.getRealm();
+
+                FromHeader from = (FromHeader) reoriginatedRequest.getHeader(FromHeader.NAME);
+                URI uri = from.getAddress().getURI();
+
+                AuthorizationHeader authorization = getAuthorization(reoriginatedRequest.getMethod(),
+                		reoriginatedRequest.getRequestURI().toString(),
+                        reoriginatedRequest.getContent() == null ? "" : reoriginatedRequest.getContent().toString(),
+                        authHeader, proxyCredentials);
+
+                reoriginatedRequest.addHeader(authorization);
+
+                // if there was trouble with the user - make sure we fix it
+                if (uri.isSipURI()) {
+                    ((SipURI) uri).setUser(proxyCredentials.getUserName());
+                    Address add = from.getAddress();
+                    add.setURI(uri);
+                    from.setAddress(add);
+                    reoriginatedRequest.setHeader(from);
+
+                    if (challengedRequest.getMethod().equals(Request.REGISTER))
+                    {
+                        ToHeader to = (ToHeader) reoriginatedRequest.getHeader(ToHeader.NAME);
+                        add.setURI(uri);
+                        to.setAddress(add);
+                        reoriginatedRequest.setHeader(to);
+
+                    }
+
+                    Logger.println("URI: " + uri.toString());
+                }
+
+                // if this is a register - fix to as well
+
+            }
+
+            return retryTran;
+        }
+        catch (Exception e) {
+            Logger.println("ERRO REG: " + e.toString());
+			e.printStackTrace();
+            return null;
+        }
+    }
+
+    private synchronized static AuthorizationHeader getAuthorization(String method, String uri,
+                                                 String requestBody, WWWAuthenticateHeader authHeader,
+                                                 ProxyCredentials proxyCredentials) throws SecurityException {
+        String response = null;
+        try {
+            Logger.println("getAuthorization " + proxyCredentials.getAuthUserName());
+
+            response = MessageDigestAlgorithm.calculateResponse(authHeader
+                    .getAlgorithm(), proxyCredentials.getAuthUserName(),
+                    authHeader.getRealm(), new String(proxyCredentials
+                    .getPassword()), authHeader.getNonce(),
+                    // TODO we should one day implement those two null-s
+                    null,// nc-value
+                    null,// cnonce
+                    method, uri, requestBody, authHeader.getQop());
+        }
+        catch (NullPointerException exc) {
+            throw new SecurityException(
+                    "The authenticate header was malformatted");
+        }
+
+        AuthorizationHeader authorization = null;
+        try {
+            if (authHeader instanceof ProxyAuthenticateHeader) {
+                authorization = headerFactory
+                        .createProxyAuthorizationHeader(authHeader.getScheme());
+            } else {
+                authorization = headerFactory
+                        .createAuthorizationHeader(authHeader.getScheme());
+            }
+
+            authorization.setUsername(proxyCredentials.getAuthUserName());
+            authorization.setRealm(authHeader.getRealm());
+            authorization.setNonce(authHeader.getNonce());
+            authorization.setParameter("uri", uri);
+            authorization.setResponse(response);
+
+            if (authHeader.getAlgorithm() != null)
+                authorization.setAlgorithm(authHeader.getAlgorithm());
+            if (authHeader.getOpaque() != null)
+                authorization.setOpaque(authHeader.getOpaque());
+
+            authorization.setResponse(response);
+        }
+        catch (ParseException ex) {
+			throw new SecurityException("Failed to create an authorization header!");
+        }
+
+        return authorization;
     }
 
 }

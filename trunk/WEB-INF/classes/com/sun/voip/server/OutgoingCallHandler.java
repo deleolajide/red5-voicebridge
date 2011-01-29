@@ -89,11 +89,9 @@ public class OutgoingCallHandler extends CallHandler
             conferenceManager = ConferenceManager.getConference(cp);
 
             if (conferenceManager == null) {
-                Logger.error("Couldn't start conference "
-                        + cp.getConferenceId());
+                Logger.error("Couldn't start conference " + cp.getConferenceId());
 
-                sendCallEventNotification(
-		    new CallEvent(CallEvent.CANT_START_CONFERENCE));
+                sendCallEventNotification( new CallEvent(CallEvent.CANT_START_CONFERENCE));
                 return;
             }
 
@@ -128,44 +126,33 @@ public class OutgoingCallHandler extends CallHandler
             /*
              * User specified a specific gateway.  Use that one only.
              */
-            Logger.println("Call " + this
-                    + ":  Using gateway specified for the call:  " + gateway);
+            Logger.println("Call " + this + ":  Using gateway specified for the call:  " + gateway);
 
             lastGateway = true;
 	    onlyOneGateway = true;
             placeCall();
         } else if (voIPGateways.size() > 0) {
-	    if (voIPGateways.size() == 1) {
-		onlyOneGateway = true;
-	    }
 
-            /*
-             * Try each gateway until one works.
-             */
-            for (int i = 0; i < voIPGateways.size(); i++) {
-                reasonCallEnded = null;
+			if (voIPGateways.size() == 1) {
+				onlyOneGateway = true;
+			}
 
-                String voIPGateway = (String) voIPGateways.get(i);
-
-                cp.setVoIPGateway(voIPGateway);
-
-                if (i == voIPGateways.size() - 1) {
-                    lastGateway = true;
-                }
-
-                placeCall();
-
-                if (reasonCallEnded.indexOf("gateway error") < 0) {
-                    break;
-                }
-            }
-        } else {
-            Logger.println("Call " + this + " placed without gateway");
-
-            // no gateways, just try to place the call
             lastGateway = true;
             placeCall();
-        }
+
+        } else if (cp.getPhoneNumber() != null && cp.getPhoneNumber().indexOf("sip:") == 0) {
+
+			 placeCall(); // no gateway involved, direct SIP call
+
+		} else if (cp.getProtocol() != null &&  cp.getProtocol().equalsIgnoreCase("RTMP")) {
+
+			 placeCall(); // RTMP call
+
+		} else {
+
+			Logger.error("Couldn't place call " + cp);
+			sendCallEventNotification( new CallEvent(CallEvent.CANT_START_CONFERENCE));
+		}
 
         conferenceManager.leave(member); // Remove member from conference.
 
