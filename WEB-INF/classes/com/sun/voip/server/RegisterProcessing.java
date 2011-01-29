@@ -68,6 +68,7 @@ import javax.sip.header.*;
 import javax.sip.message.*;
 
 import com.sun.voip.Logger;
+import org.red5.server.webapp.voicebridge.*;
 
 /**
  * <p>Title: SIP COMMUNICATOR-1.1</p>
@@ -86,7 +87,8 @@ class RegisterProcessing implements SipListener {
     private Timer reRegisterTimer = new Timer();
 
     private String registrar;
-    private String loginInfo;
+    private String address;
+    private ProxyCredentials proxyCredentials;
 
     private String sipCallId;
 
@@ -94,24 +96,28 @@ class RegisterProcessing implements SipListener {
 
     int registrarPort = 5060;
 
-    int expires = 3600;
+    int expires = 120;
 
     private HeaderFactory headerFactory = SipServer.getHeaderFactory();
     private AddressFactory addressFactory = SipServer.getAddressFactory();
     private MessageFactory messageFactory = SipServer.getMessageFactory();
     private SipProvider sipProvider = SipServer.getSipProvider();
 
-    public RegisterProcessing(String registrar, String loginInfo) {
-	this.registrar = registrar;
-	this.loginInfo = loginInfo;
+    public RegisterProcessing(String address, String registrar, ProxyCredentials proxyCredentials)
+    {
+		Logger.println("Start registering...." + registrar);
 
-	sipServerCallback = SipServer.getSipServerCallback();
+		this.registrar = registrar;
+		this.proxyCredentials = proxyCredentials;
+		this.address = address;
 
-	try {
-	    register();
-	} catch (IOException e) {
-	    Logger.println(e.getMessage());
-	}
+		sipServerCallback = SipServer.getSipServerCallback();
+
+		try {
+			register();
+		} catch (IOException e) {
+			Logger.println(e.getMessage());
+		}
     }
 
     public void processRequest(RequestEvent requestReceivedEvent) {
@@ -121,8 +127,11 @@ class RegisterProcessing implements SipListener {
 
     public void processResponse(ResponseEvent responseReceivedEvent) {
 
+		//Logger.println("Registering response...." + sipCallId);
+
 		Response response = (Response)responseReceivedEvent.getResponse();
         int statusCode = response.getStatusCode();
+        String method = ((CSeqHeader) response.getHeader(CSeqHeader.NAME)).getMethod();
 
 		if (Logger.logLevel >= Logger.LOG_MOREINFO) {
 			Logger.println("Got response " + response);
@@ -135,10 +144,34 @@ class RegisterProcessing implements SipListener {
 
         	sipServerCallback.removeSipListener(sipCallId);
 
-		} else if (statusCode == Response.UNAUTHORIZED ||
-			statusCode == Response.PROXY_AUTHENTICATION_REQUIRED) {
+		} else if (statusCode == Response.UNAUTHORIZED || statusCode == Response.PROXY_AUTHENTICATION_REQUIRED) {
 
-			Logger.println("Registration with " + registrar	+ " got an authentication challenge which "	+ "the bridge does not support!");
+            if (method.equals(Request.REGISTER))
+            {
+                CSeqHeader cseq = (CSeqHeader) response.getHeader(CSeqHeader.NAME);
+
+            	if (cseq.getSequenceNumber() < 2) {
+
+					ClientTransaction regTrans = SipServer.handleChallenge(response, responseReceivedEvent.getClientTransaction(), proxyCredentials);
+
+					if (regTrans != null)
+					{
+						try {
+							regTrans.sendRequest();
+
+						} catch (Exception e) {
+
+							Logger.println("Registration failed, cannot send transaction " + e);
+						}
+
+					} else {
+
+						Logger.println("Registration failed, cannot create transaction");
+					}
+
+                } else
+                    Logger.println("Registration failed " + responseReceivedEvent);
+            }
 
 		} else {
 			Logger.println("Unrecognized response:  " + response);
@@ -175,6 +208,7 @@ class RegisterProcessing implements SipListener {
     private void register() throws IOException {
 	Logger.println("Registering with " + registrar);
 
+
         FromHeader fromHeader = getFromHeader();
 
         Address fromAddress = fromHeader.getAddress();
@@ -185,10 +219,9 @@ class RegisterProcessing implements SipListener {
             requestURI = addressFactory.createSipURI(null, registrar);
 
 	} catch (ParseException e) {
-            throw new IOException("Bad registrar address:" + registrar + " "
-		+ e.getMessage());
+            throw new IOException("Bad registrar address:" + registrar + " " + e.getMessage());
         }
-        requestURI.setPort(registrarPort);
+        //requestURI.setPort(registrarPort);
 
 
         try {
@@ -277,6 +310,17 @@ class RegisterProcessing implements SipListener {
         //Contact Header should contain IP - bug report - Eero Vaarnas
         ContactHeader contactHeader = getRegistrationContactHeader();
 	request.addHeader(contactHeader);
+
+	try {
+		SipURI routeURI = (SipURI) addressFactory.createURI("sip:" + proxyCredentials.getProxy() + ";lr");
+		RouteHeader routeHeader = headerFactory.createRouteHeader(addressFactory.createAddress(routeURI));
+		request.addHeader(routeHeader);
+
+	} catch (Exception e) {
+
+		Logger.error("Creating registration route error " + e);
+	}
+
         //Transaction
         ClientTransaction regTrans = null;
         try {
@@ -371,7 +415,7 @@ class RegisterProcessing implements SipListener {
         }
 
 	try {
-	    SipURI fromURI = (SipURI) addressFactory.createURI(loginInfo);
+	    SipURI fromURI = (SipURI) addressFactory.createURI("sip:" + proxyCredentials.getUserName() + "@" + registrar);
 
             fromURI.setTransportParam(sipProvider.getListeningPoint().getTransport());
 
@@ -379,7 +423,7 @@ class RegisterProcessing implements SipListener {
 
             Address fromAddress = addressFactory.createAddress(fromURI);
 
-            fromAddress.setDisplayName("VoiceBridge");
+            fromAddress.setDisplayName(proxyCredentials.getUserDisplay());
 
 	    fromHeader = headerFactory.createFromHeader(fromAddress, Integer.toString(hashCode()));
 
@@ -455,13 +499,13 @@ class RegisterProcessing implements SipListener {
         }
 
         try {
-            SipURI contactURI = (SipURI) addressFactory.createURI(loginInfo);
+            SipURI contactURI = (SipURI) addressFactory.createURI("sip:" + proxyCredentials.getUserName() + "@" + Config.getInstance().getPublicHost());
 
             contactURI.setTransportParam(
 		sipProvider.getListeningPoint().getTransport());
 	    contactURI.setPort(sipProvider.getListeningPoint().getPort());
             Address contactAddress = addressFactory.createAddress(contactURI);
-            contactAddress.setDisplayName("VoiceBridge");
+            contactAddress.setDisplayName(proxyCredentials.getUserDisplay());
             contactHeader = headerFactory.createContactHeader(contactAddress);
             return contactHeader;
 	} catch (ParseException e) {
@@ -501,5 +545,4 @@ class ReRegisterTask extends TimerTask {
         //bug report and fix by Willem Romijn (romijn at lucent.com)
         reRegisterTimer.schedule(reRegisterTask, expires * 1000);
     }
-
 }

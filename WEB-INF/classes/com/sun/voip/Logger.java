@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip;
@@ -66,22 +66,19 @@ public class Logger {
     /**
      * Private Constructor
      */
-    private Logger() {} 
+    private Logger() {}
 
-    /** 
+    /**
      * Initializes the logger
      */
     public static void init() {
-        // Open log file 
+        // Open log file
         logFileName = System.getProperty(
             "com.sun.voip.server.BRIDGE_LOG", "bridge.log");
 
         if (logFileName.charAt(0) != File.separatorChar) {
-            String s = System.getProperty(
-                "com.sun.voip.server.Bridge.logDirectory", "."
-		+ File.separator + "log");
-
-            logFileName = s + File.separator + logFileName;
+            String s = System.getProperty("com.sun.voip.server.Bridge.logDirectory", "." + File.separator + "log" + File.separator);
+            logFileName = s + logFileName;
         }
 
 	init(logFileName, false);
@@ -116,7 +113,7 @@ public class Logger {
 	    fw = null;
 	    bw = null;
 
-            println(getDate() + "could not open log file: " 
+            println(getDate() + "could not open log file: "
 		+ logFileName);
         }
     }
@@ -159,7 +156,7 @@ public class Logger {
         System.out.println(getDate() + msg);
         System.out.flush();
     }
-        
+
     /**
      * Logs a message.
      * @param msg the message to log.
@@ -172,7 +169,7 @@ public class Logger {
         System.out.println(getDate() + msg);
         System.out.flush();
     }
-       
+
     /**
      * Logs a message to the log file only.  This write is buffered
      * so as to not disrupt timing.
@@ -185,7 +182,7 @@ public class Logger {
                     bw.write(getDate() + msg + "\n");
 		}
 	    } catch (IOException e) {
-		System.out.println(getDate() + "Unable to writeFile! " 
+		System.out.println(getDate() + "Unable to writeFile! "
 		    + e.getMessage());
 		close();
 	    }
@@ -212,7 +209,7 @@ public class Logger {
 	    }
 	} catch (IOException e) {
             System.out.println(getDate() + "could not flush log file. "
-		+ e.getMessage()); 
+		+ e.getMessage());
 	}
     }
 
@@ -237,12 +234,12 @@ public class Logger {
                 fw.close();
 	    }
 	} catch (IOException e) {
-            //System.out.println(getDate() + "could not close log file"); 
+            //System.out.println(getDate() + "could not close log file");
 	}
 
 	fw = null;
     }
-    
+
     private static String[] month = {
 	"Jan",
 	"Feb",
@@ -270,8 +267,8 @@ public class Logger {
 	    ms += " ";
 	}
 
-	String s = m + " " + now.get(Calendar.DAY_OF_MONTH) + " " 
-	    + now.get(Calendar.HOUR_OF_DAY) + ":" + now.get(Calendar.MINUTE) 
+	String s = m + " " + now.get(Calendar.DAY_OF_MONTH) + " "
+	    + now.get(Calendar.HOUR_OF_DAY) + ":" + now.get(Calendar.MINUTE)
 	    + ":" + now.get(Calendar.SECOND) + "." + ms + " ";
 
 	s += "            ";

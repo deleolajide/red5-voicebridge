@@ -1,9 +1,19 @@
 Buildfile: build.xml
 
 compile:
-    [javac] Compiling 2 source files to C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes
-    [javac] Note: C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\org\red5\server\webapp\voicebridge\RtmpParticipant.java uses unchecked or unsafe operations.
+    [javac] Compiling 1 source file to C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes
+    [javac] C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\com\sun\voip\server\SipUtil.java:108: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac] 	ourSipPort = sipProvider.getListeningPoint().getPort();
+    [javac] 	                        ^
+    [javac] C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\com\sun\voip\server\SipUtil.java:541: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]             (sipProvider.getListeningPoint().getTransport());
+    [javac]                         ^
+    [javac] C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\com\sun\voip\server\SipUtil.java:567: warning: [deprecation] createCSeqHeader(int,java.lang.String) in javax.sip.header.HeaderFactory has been deprecated
+    [javac]         cSeqHeader = headerFactory.createCSeqHeader(1, Request.INVITE);
+    [javac]                                   ^
+    [javac] Note: C:\Program Files\Red5\webapps\voicebridge\WEB-INF\classes\com\sun\voip\server\SipUtil.java uses unchecked or unsafe operations.
     [javac] Note: Recompile with -Xlint:unchecked for details.
+    [javac] 3 warnings
 
 BUILD SUCCESSFUL
-Total time: 3 seconds
+Total time: 2 seconds

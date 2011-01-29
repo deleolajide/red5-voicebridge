@@ -124,38 +124,4 @@ public class Bridge {
 	return (InetSocketAddress) new InetSocketAddress(privateHost,  privateControlPort);
     }
 
-    private static DatagramSocket datagramSocket;
-
-    public static void sendMarkerPacket(String s) {
-        InetAddress ia;
-
-        DatagramPacket datagramPacket;
-
-        try {
-	    if (datagramSocket == null) {
-                datagramSocket = new DatagramSocket();
-	    }
-
-	    InetAddress gateway = InetAddress.getByName(
-		SipServer.getVoIPGateways().get(0));
-
-            datagramPacket = new DatagramPacket(
-		s.getBytes(), s.length(), gateway, 9);
-
-            datagramSocket.send(datagramPacket);
-	} catch (InterruptedIOException e) {
-	    // happens at the end of a conference.  Just ignore it.
-	    if (datagramSocket != null) {
-		datagramSocket.close();
-		datagramSocket = null;
-	    }
-        } catch (Exception e) {
-            Logger.error("can't send marker packet " + e.getMessage());
-	    e.printStackTrace();
-	    if (datagramSocket != null) {
-		datagramSocket.close();
-		datagramSocket = null;
-	    }
-        }
-    }
 }

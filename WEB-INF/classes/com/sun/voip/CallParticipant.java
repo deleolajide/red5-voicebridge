@@ -24,6 +24,8 @@
 package com.sun.voip;
 
 import java.net.InetSocketAddress;
+import org.red5.server.webapp.voicebridge.*;
+
 
 /**
  * A Class to represent a call participant - a party in a call.
@@ -83,6 +85,7 @@ public class CallParticipant {
     private boolean voiceDetectionWhileMuted       = false;
     private boolean handleSessionProgress	   = false;
     private String remoteMediaInfo		   = null;
+    private ProxyCredentials proxyCredentials = null;
 
     /*
      * Second party in a two party call or target of migration
@@ -102,6 +105,22 @@ public class CallParticipant {
      */
     public CallParticipant() {
     }
+
+
+    /**
+     * Get/Set proxy credentials
+     */
+    public ProxyCredentials getProxyCredentials()
+    {
+		return proxyCredentials;
+    }
+
+    public void setProxyCredentials(ProxyCredentials proxyCredentials)
+    {
+		this.proxyCredentials = proxyCredentials;
+    }
+
+
 
     /**
      * Get call answer timeout

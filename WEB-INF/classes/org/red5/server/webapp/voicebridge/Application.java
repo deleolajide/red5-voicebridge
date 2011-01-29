@@ -31,7 +31,7 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
 
     protected static Logger log = Red5LoggerFactory.getLogger( Application.class, "voicebridge" );
 	private String version = "0.0.0.1";
-	private Config config = Config.getInstance();
+	private Config config;
 
 	private Map< String, Object > callObjects = new HashMap< String, Object >();
 	private Map< String, CallParticipant > callPartipants = new HashMap< String, CallParticipant >();
@@ -42,34 +42,45 @@ public class Application extends ApplicationAdapter implements IStreamAwareScope
     @Override
     public boolean appStart( IScope scope ) {
 
-        loginfo( "Red5VoiceBridge starting in scope " + scope.getName() + " " + System.getProperty( "user.dir" ) );
-        loginfo(String.format("Red5VoiceBridge version %s", version));
+		try{
+			loginfo( "Red5VoiceBridge starting in scope " + scope.getName() + " " + System.getProperty( "user.dir" ) );
+			loginfo(String.format("Red5VoiceBridge version %s", version));
 
-		String appPath = System.getProperty("user.dir");
-		String logDir = appPath + File.separator + "log" + File.separator;
-		//String logDir = appPath + File.separator + ".." + File.separator + "logs" + File.separator;
+			config = Config.getInstance();
+
+			String appPath = System.getProperty("user.dir");
+			String logDir = appPath + File.separator + "log" + File.separator;
+			//String logDir = appPath + File.separator + ".." + File.separator + "logs" + File.separator;
 
 
-		Properties properties = new Properties();
+			Properties properties = new Properties();
 
-		System.setProperty("com.sun.voip.server.LOGLEVEL", "99");
-		System.setProperty("com.sun.voip.server.FIRST_RTP_PORT", "3200");
-		System.setProperty("com.sun.voip.server.LAST_RTP_PORT", "3299");
-		//System.setProperty("com.sun.voip.server.SIPProxy", "");
-		System.setProperty("user.name", "1002");
-		//System.setProperty("com.sun.voip.server.VoIPGateways", "");
-		properties.setProperty("javax.sip.STACK_NAME", "JAIN SIP 1.1");
-		properties.setProperty("javax.sip.RETRANSMISSION_FILTER", "on");
-		properties.setProperty("gov.nist.javax.sip.TRACE_LEVEL", "99");
-		properties.setProperty("gov.nist.javax.sip.SERVER_LOG", logDir + "sip_server.log");
-		properties.setProperty("gov.nist.javax.sip.DEBUG_LOG", logDir + "sip_debug.log");
+			System.setProperty("com.sun.voip.server.LOGLEVEL", "99");
+			System.setProperty("com.sun.voip.server.FIRST_RTP_PORT", "3200");
+			System.setProperty("com.sun.voip.server.LAST_RTP_PORT", "3299");
+			System.setProperty("com.sun.voip.server.Bridge.logDirectory", logDir);
+			System.setProperty("com.sun.voip.server.BRIDGE_LOG", "bridge.log");
+			System.setProperty("com.sun.voip.server.LOGLEVEL", "99");
+			System.setProperty("com.sun.voip.server.PUBLIC_IP_ADDRESS", config.getPublicHost());
 
-		Bridge.setPublicHost(config.getPublicHost());
-		Bridge.setPrivateHost(config.getPrivateHost());
-		Bridge.setBridgeLocation("LCL");
+			properties.setProperty("javax.sip.STACK_NAME", "JAIN SIP 1.1");
+			properties.setProperty("javax.sip.RETRANSMISSION_FILTER", "on");
+			properties.setProperty("gov.nist.javax.sip.TRACE_LEVEL", "99");
+			properties.setProperty("gov.nist.javax.sip.SERVER_LOG", logDir + "sip_server.log");
+			properties.setProperty("gov.nist.javax.sip.DEBUG_LOG", logDir + "sip_debug.log");
+			properties.setProperty("javax.sip.IP_ADDRESS",config.getPrivateHost());
 
-		new SipServer(config.getPrivateHost(), properties);
+			Bridge.setPublicHost(config.getPublicHost());
+			Bridge.setPrivateHost(config.getPrivateHost());
+			Bridge.setBridgeLocation("LCL");
 
+
+			new SipServer(config, properties);
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
         return true;
     }
 

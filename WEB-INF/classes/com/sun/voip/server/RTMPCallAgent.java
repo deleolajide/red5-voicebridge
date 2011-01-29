@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.red5.server.webapp.voicebridge.RtmpParticipant;
-
+import org.red5.server.webapp.voicebridge.Config;
 
 public class RTMPCallAgent extends CallSetupAgent
 {
@@ -65,7 +65,7 @@ public class RTMPCallAgent extends CallSetupAgent
 	public void initiateCall() throws IOException
 	{
 		try {
-			rtmpParticipant.startStream("localhost", "voicebridge", 1935, cp.getRtmpSendStream(), cp.getRtmpRecieveStream(), conferenceStartTime);
+			rtmpParticipant.startStream(Config.getInstance().getPrivateHost(), "voicebridge", 1935, cp.getRtmpSendStream(), cp.getRtmpRecieveStream(), conferenceStartTime);
 			setState(CallState.ESTABLISHED);
 
 		} catch (Exception e) {
