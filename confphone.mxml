@@ -42,22 +42,32 @@
 	}
 
 	private function initMicrophone():void {
-		mic = Microphone.getMicrophone();
+		mic = getMicrophone();
 
 		if(mic == null){
 			trace("No available microphone");
 		} else {
-			mic.setUseEchoSuppression(true);
+			//mic.setUseEchoSuppression(true);
 			mic.setLoopBack(false);
 			mic.setSilenceLevel(10);
 			mic.gain = 60;
-			mic.rate = 8;
+			mic.codec = SoundCodec.PCMU;
+			
 			mic.addEventListener(ActivityEvent.ACTIVITY, micActivityHandler);
 			mic.addEventListener(StatusEvent.STATUS, micStatusHandler);
 		}
 	}							
 
+	private function getMicrophone() :Microphone 
+	{
+		var mic:Microphone = Microphone.getEnhancedMicrophone();
+		var options:MicrophoneEnhancedOptions = new MicrophoneEnhancedOptions();
+		options.mode = MicrophoneEnhancedMode.FULL_DUPLEX;
+		options.nonLinearProcessing = true;
+		mic.enhancedOptions = options;
 
+		return mic;
+	}
 
 	private function micActivityHandler(event:ActivityEvent):void {
 		//simpleLabel.text= "activityHandler: " + event;

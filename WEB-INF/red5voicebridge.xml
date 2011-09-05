@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-	<privateHost>192.168.1.70</privateHost>
-	<publicHost>192.168.1.70</publicHost>	
+	<privateHost>192.168.1.88</privateHost>
+	<publicHost>192.168.1.88</publicHost>	
 	<defaultProxy>192.168.1.90</defaultProxy>
 	
 	<registration>
